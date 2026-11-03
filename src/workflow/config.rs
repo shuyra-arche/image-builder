@@ -21,6 +21,8 @@ pub struct Config {
     pub tests: BTreeMap<String, Test>,
     #[serde(default)]
     pub clusters: BTreeMap<String, Cluster>,
+    #[serde(default)]
+    pub units: BTreeMap<String, Unit>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -31,6 +33,8 @@ pub struct Source {
     pub rev: String,
     #[serde(default)]
     pub patches: Vec<PathBuf>,
+    #[serde(default)]
+    pub submodules: Vec<PathBuf>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -57,6 +61,12 @@ pub struct Host {
     pub package: String,
     pub bin: String,
     pub dependency_manifest: PathBuf,
+    #[serde(default = "library_alias")]
+    pub dependency_alias: String,
+}
+
+fn library_alias() -> String {
+    "vanllia-build".to_string()
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -119,4 +129,14 @@ pub enum Test {
 pub struct Cluster {
     pub members: Vec<String>,
     pub scenarios: Vec<String>,
+    #[serde(default)]
+    pub shared_crates: BTreeMap<String, Package>,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Unit {
+    pub source: String,
+    pub manifest: PathBuf,
+    pub tests: Vec<String>,
 }

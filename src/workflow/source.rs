@@ -116,6 +116,9 @@ pub(super) fn prepare(
             return Err("source names must be one path component".into());
         }
         let root = sources.join(&source.name);
+        if overrides.contains_key(&source.name) && !source.submodules.is_empty() {
+            return Err("local overrides with gitlinks require separately declared sources".into());
+        }
         let (head, local) = if let Some(local) = overrides.get(&source.name) {
             std::fs::create_dir(&root).map_err(|e| e.to_string())?;
             let files = snapshot(local, Some(&root))?;
@@ -153,6 +156,33 @@ pub(super) fn prepare(
             }
             (head, None)
         };
+        let submodules = if source.submodules.is_empty() {
+            String::new()
+        } else {
+            for path in &source.submodules {
+                relative(path)?;
+            }
+            capture(
+                Command::new("git")
+                    .arg("-C")
+                    .arg(&root)
+                    .args(["submodule", "update", "--init", "--recursive", "--"])
+                    .args(&source.submodules),
+            )?;
+            let status = capture(Command::new("git").arg("-C").arg(&root).args([
+                "submodule",
+                "status",
+                "--recursive",
+            ]))?;
+            let status = String::from_utf8(status).map_err(|e| e.to_string())?;
+            if status
+                .lines()
+                .any(|line| line.starts_with('+') || line.starts_with('U'))
+            {
+                return Err("submodule commit mismatch".into());
+            }
+            status
+        };
         let mut patches = Vec::new();
         for patch in &source.patches {
             let patch = base.join(patch).canonicalize().map_err(|e| e.to_string())?;
@@ -168,7 +198,7 @@ pub(super) fn prepare(
         }
         evidence.push(serde_json::json!({"name": source.name, "git": source.git,
             "baseline": source.rev, "head": head, "override": overrides.get(&source.name),
-            "snapshot": local, "patches": patches}));
+            "snapshot": local, "patches": patches, "gitlinks": submodules}));
     }
     publication::write(
         &attempt.join("sources.json"),
@@ -187,10 +217,11 @@ pub(super) fn configure(config: &Config, base: &Path, attempt: &Path) -> Result<
         .map_err(|e| e.to_string())?
         .parse()
         .map_err(|e| format!("manifest: {e}"))?;
-    host["dependencies"]
+    let dependencies = host["dependencies"]
         .as_table_mut()
-        .ok_or("host dependencies missing")?
-        .remove("image-builder");
+        .ok_or("host dependencies missing")?;
+    dependencies.remove("image-builder");
+    dependencies.remove(&config.host.dependency_alias);
     let library_source = base
         .join(&config.library)
         .canonicalize()
@@ -198,7 +229,9 @@ pub(super) fn configure(config: &Config, base: &Path, attempt: &Path) -> Result<
     let library = attempt.join("library");
     std::fs::create_dir(&library).map_err(|e| e.to_string())?;
     snapshot(&library_source, Some(&library))?;
-    host["dependencies"]["vanllia-build"]["path"] =
+    host["dependencies"][&config.host.dependency_alias]["package"] =
+        toml_edit::value("vanllia-build");
+    host["dependencies"][&config.host.dependency_alias]["path"] =
         toml_edit::value(library.to_string_lossy().as_ref());
     publication::write(&host_manifest, host.to_string().as_bytes())?;
     let mut locks = Vec::new();

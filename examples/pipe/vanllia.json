@@ -66,8 +66,9 @@
     }
   },
   "clusters": {"pipe-unit": {"members": ["pipe"], "scenarios": ["pipe-integration"]}},
+  "units": {"pipe": {"source": "pipe", "manifest": "Cargo.toml", "tests": ["pipe-host"]}},
   "tests": {
-    "pipe": {"kind": "host", "source": "pipe", "manifest": "tests/Cargo.toml", "args": [], "timeout_seconds": 120},
+    "pipe-host": {"kind": "host", "source": "pipe", "manifest": "tests/Cargo.toml", "args": [], "timeout_seconds": 120},
     "pipe-integration": {"kind": "scenario", "deployment": "pipe-independent"}
   }
 }

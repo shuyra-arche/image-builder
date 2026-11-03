@@ -421,7 +421,7 @@ fn slim(src: &Path, out: &Path) -> Result<Vec<u8>, String> {
     })();
     if let Err(error) = std::fs::remove_file(&dst)
         && error.kind() != std::io::ErrorKind::NotFound {
-        return Err(format!("{r:?}; cleanup {}: {error}", dst.display()));
+        return Err(format!("slimming_result={:?}; cleanup {}: {error}", r.as_ref().map(Vec::len), dst.display()));
     }
     r
 }

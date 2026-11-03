@@ -4,7 +4,9 @@ mod config;
 pub(crate) mod process;
 mod source;
 
-pub use config::{Cluster, Config, Deployment, Firmware, Host, Kernel, Package, Source, Test, Workspace};
+pub use config::{
+    Cluster, Config, Deployment, Firmware, Host, Kernel, Package, Source, Test, Unit, Workspace,
+};
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -114,6 +116,19 @@ fn host(
 }
 
 fn prepare(config: &Config, base: &Path, state: &Path) -> Result<PathBuf, String> {
+    match prepare_context(config, base, state) {
+        Ok(context) => Ok(context),
+        Err(error) => {
+            if error.contains("stop_confirmed=false") {
+                publication::write(&state.join("STOP_UNCONFIRMED"), error.as_bytes())
+                    .map_err(|cleanup| format!("{error}; reservation failed: {cleanup}"))?;
+            }
+            Err(error)
+        }
+    }
+}
+
+fn prepare_context(config: &Config, base: &Path, state: &Path) -> Result<PathBuf, String> {
     let overrides = load_overrides(state)?;
     for name in overrides.keys() {
         if !config.sources.iter().any(|source| &source.name == name) {
@@ -337,7 +352,7 @@ fn run_deployment(config: &Config, context: &Path, out: &Path, name: &str) -> Re
     Ok(())
 }
 
-fn test(config: &Config, context: &Path, out: &Path, name: &str) -> Result<(), String> {
+fn test_case(config: &Config, context: &Path, out: &Path, name: &str) -> Result<(), String> {
     match config
         .tests
         .get(name)
@@ -404,6 +419,22 @@ fn test(config: &Config, context: &Path, out: &Path, name: &str) -> Result<(), S
     }
 }
 
+fn test(config: &Config, context: &Path, out: &Path, name: &str) -> Result<(), String> {
+    if let Some(unit) = config.units.get(name) {
+        if unit.tests.is_empty() {
+            return Err(format!("Unit {name} declares no baseline tests"));
+        }
+        for selected in &unit.tests {
+            let evidence = out.join(selected);
+            std::fs::create_dir_all(&evidence).map_err(|e| e.to_string())?;
+            test_case(config, context, &evidence, selected)?;
+        }
+        Ok(())
+    } else {
+        test_case(config, context, out, name)
+    }
+}
+
 fn cluster_tests(
     config: &Config,
     name: &str,
@@ -421,7 +452,7 @@ fn cluster_tests(
     for member in &cluster.members {
         if config.clusters.contains_key(member) {
             cluster_tests(config, member, stack, picked)?;
-        } else if !config.tests.contains_key(member) {
+        } else if !config.units.contains_key(member) {
             return Err(format!("unknown Cluster member {member}"));
         }
     }
@@ -506,9 +537,43 @@ fn validate(config: &Config) -> Result<(), String> {
             }
         }
     }
+    for (name, unit) in &config.units {
+        source::relative(Path::new(name))?;
+        source::relative(&unit.manifest)?;
+        if !config
+            .workspaces
+            .iter()
+            .any(|w| w.source == unit.source && w.manifest == unit.manifest)
+        {
+            return Err(format!(
+                "Unit {name} workspace is not explicitly configured"
+            ));
+        }
+        for test in &unit.tests {
+            let source = match config.tests.get(test) {
+                Some(config::Test::Host { source, .. } | config::Test::Target { source, .. }) => {
+                    source
+                }
+                _ => {
+                    return Err(format!(
+                        "Unit {name} baseline {test} is missing or is a system scenario"
+                    ));
+                }
+            };
+            if source != &unit.source {
+                return Err(format!("Unit {name} baseline source mismatch"));
+            }
+        }
+    }
     for name in config.clusters.keys() {
         source::relative(Path::new(name))?;
         cluster_tests(config, name, &mut Vec::new(), &mut Vec::new())?;
+        for package in config.clusters[name].shared_crates.values() {
+            if !names.contains(&package.source) {
+                return Err("unknown shared crate source".into());
+            }
+            source::relative(&package.path)?;
+        }
     }
     Ok(())
 }
@@ -567,16 +632,7 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
         println!("{}", serde_json::to_string_pretty(&overrides).unwrap());
         return Ok(state.join("overrides.json"));
     }
-    let context = match prepare(&config, base, &state) {
-        Ok(context) => context,
-        Err(error) => {
-            if error.contains("stop_confirmed=false") {
-                publication::write(&state.join("STOP_UNCONFIRMED"), error.as_bytes())
-                    .map_err(|cleanup| format!("{error}; reservation failed: {cleanup}"))?;
-            }
-            return Err(error);
-        }
-    };
+    let context = prepare(&config, base, &state)?;
     if verb == "prepare" {
         return Ok(context);
     }

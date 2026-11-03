@@ -64,9 +64,12 @@ Prepared inputs are verified before reuse. Failed preparation is retained;
 retry uses an independent context. Tool/config/patch changes select a new context.
 Ordinary execution does not update an existing baseline or a user lockfile.
 
-Tests are explicitly host (Cargo test), target (Cargo binary plus existing runner)
-or scenario (build/run a selected test deployment). Clusters can nest and organize
-Unit test names; collaboration acceptance runs only declared scenarios. No
+Units declare their own source/workspace and baseline tests. A baseline must be
+a host or target test from that Unit's source; it cannot silently select a system
+scenario. Tests are explicitly host (Cargo test), target (Cargo binary plus
+existing runner) or scenario (build/run a selected test deployment). Clusters
+can nest and organize Units/shared crates; collaboration acceptance runs only
+declared scenarios. No
 scenario means an error. Repository, workspace, Cluster and Unit need not coincide.
 
 Runner arguments are argv, not shell recipes. Substitutions: `{sources}`, `{tool}`,
@@ -80,9 +83,21 @@ checks evidence; it does not reproduce pipe RPC tests. The QEMU shim removes
 implicit `-nographic` using Source's existing serial mechanism and waits for
 the output copier to finish.
 
-The example is a provider integration fixture, not an independent product
-acceptance or hardware validation. Other product/Cluster scenarios need explicit
-caller-owned configuration.
+The pipe example is a provider integration fixture. An independent product
+example is `examples/source/vanllia.json`: it selects the existing Source
+Integration's `product` Deployment at f82ee2a9, initializes its fixed Kernel and
+System gitlinks, and calls its existing `scripts/qtest.nu` driver/judge at 4/8
+Harts, with its existing terminal/session.py input driver. `source/host.patch`
+adds the explicit-root interface to its existing CLI and fixes the helper
+launcher's PID handoff with `exec`; assertions and guest limits are unchanged.
+`dependency_alias: "image"` preserves its existing imports/tests. No second
+Integration crate is created and no product list is moved into the tool. Other
+product/Cluster scenarios need caller-owned configuration. QEMU is not hardware
+validation.
+
+Sources can list fixed `submodules` to initialize. Their commits come from the
+parent's pinned gitlinks and are recorded. Local substitution of a source with
+gitlinks is rejected: declare independently substitutable sources instead.
 
 ## Publication and evidence
 
