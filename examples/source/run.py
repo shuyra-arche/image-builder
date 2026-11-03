@@ -27,7 +27,8 @@ def main():
                "--feed-script", str(source / "programs/tests/terminal/session.py"),
                "--", "--test", "embedded", "--features", "semihosting", "--verbose"]
     (evidence / "command.json").write_text(json.dumps(command, indent=2))
-    export = source / "components/kernel/sqware-diagnose.jsonl"
+    # The existing QEMU shim explicitly changes cwd to QTEST_SOURCE_ROOT.
+    export = source / "sqware-diagnose.jsonl"
     if export.exists():
         raise RuntimeError("stale structured export; refusing reuse")
     result = subprocess.run(command, cwd=source, env=env)
