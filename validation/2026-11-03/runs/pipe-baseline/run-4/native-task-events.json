@@ -1,0 +1,207 @@
+{
+  "derived_from": "sqware-diagnose.jsonl",
+  "original_sha256": "b16cd80f5ac78509965fb33f6ccd68acabdc83a4bf8a7a8c2b53679778f8a668",
+  "original_bytes": 1063619,
+  "selection": "Spawn/Exit/Reap/FaultKilled/Halt events only",
+  "events": [
+    {
+      "h": 1,
+      "when": 4205147,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 1
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 6507881,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 2
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 6530468,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 3
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 17731558,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 4
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 18923191,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 5
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 19018037,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 6
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 21258057,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 6,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 21447716,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 6
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 22094251,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 5,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 22104788,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 5
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 22612563,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 4
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 24753315,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 3,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 24759265,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 3
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 24885556,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 2,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 24890617,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 2
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 24956042,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 1,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 24990791,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 1
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 25013027,
+      "kind": {
+        "halt": "halt"
+      }
+    }
+  ]
+}

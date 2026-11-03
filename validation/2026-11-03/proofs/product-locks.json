@@ -1,0 +1,22 @@
+[
+  {
+    "baseline_sha256": "98a3c8b3ca44f2c0e85eeafcceae27cd71740fa30737f12c8a17e8b4d3855be0",
+    "development_sha256": "98a3c8b3ca44f2c0e85eeafcceae27cd71740fa30737f12c8a17e8b4d3855be0",
+    "manifest": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/Cargo.toml"
+  },
+  {
+    "baseline_sha256": "ef1ec15ec758dd716a7b140372aed289373e1f5fc3fdef4d711b1311da0c4f36",
+    "development_sha256": "ad0407c0a39cd3a5c06de48aa142e76d738d782ca3fe056c9c448f513e788263",
+    "manifest": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/tools/shuyra-image/Cargo.toml"
+  },
+  {
+    "baseline_sha256": "a20561ccd029b98084d96f5b7bbe24eaf67ad2ba8fcd54ddc1274904c5da3653",
+    "development_sha256": "a20561ccd029b98084d96f5b7bbe24eaf67ad2ba8fcd54ddc1274904c5da3653",
+    "manifest": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/components/kernel/Cargo.toml"
+  },
+  {
+    "baseline_sha256": "02d996492759c83128f39ba5e5296a769692e095271f4acee617279c2b3c13fb",
+    "development_sha256": "02d996492759c83128f39ba5e5296a769692e095271f4acee617279c2b3c13fb",
+    "manifest": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/components/system/Cargo.toml"
+  }
+]

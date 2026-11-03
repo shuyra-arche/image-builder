@@ -1,0 +1,7 @@
+{
+  "cargo_reported_executable": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/components/kernel/target/riscv64gc-unknown-none-elf/release/build/kernel/955439d8451d3448/out/embedded-955439d8451d3448",
+  "sha256": "b0b748bbc304908d3f26fd9b308b087477acd68a357754be6750dc913a6ecab4",
+  "harts": 8,
+  "original_driver_exit": 0,
+  "initrd_sha256": "763ef957669b206f17f5c9a2772ebf66e26d7e8d3c644161e9415dd0f936918b"
+}

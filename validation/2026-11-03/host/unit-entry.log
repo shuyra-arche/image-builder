@@ -1,0 +1,3 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `target/x86_64-unknown-linux-gnu/debug/vanllia-build --config examples/pipe/vanllia.json --state /workspace/vanllia-state test pipe`
+ok  /workspace/vanllia-state/contexts/c2a0c0cee197399f18ecded66e8336b58392195b4db779242f8632a04882bec7-1793716666795342876/attempts/1793716671965880605-43859

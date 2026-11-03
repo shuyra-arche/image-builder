@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/workspace/image-builder/target/x86_64-unknown-linux-gnu/debug/vanllia-build",
+    "--config",
+    "/workspace/image-builder/examples/source/vanllia.json",
+    "--state",
+    "/workspace/vanllia-cancel-state-2",
+    "run",
+    "product"
+  ],
+  "exit": 2,
+  "signal": "SIGINT",
+  "owned_groups": [
+    48582
+  ],
+  "stopped": true,
+  "published": false,
+  "stderr": "vanllia-build: runner left active descendants; cleanup=Ok(ExitStatus(unix_wait_status(0))), stop_confirmed=true; prior=Err(\"execution cancelled: stop=Ok(ExitStatus(unix_wait_status(0))), wait=Ok(ExitStatus(unix_wait_status(9)))\"); evidence: /tmp/vanllia-capture-48573-1\nCloning into '/workspace/vanllia-cancel-state-2/contexts/9c7bff5206ca0614a2eaebde456838b8d73aca32c875ee0973a58cfbcc8948a1-1793716760612992116/sources/source'...\n\n"
+}

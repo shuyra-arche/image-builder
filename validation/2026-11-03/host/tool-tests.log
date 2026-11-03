@@ -1,0 +1,52 @@
+   Compiling vanllia-build v0.1.0 (/workspace/image-builder)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.30s
+     Running unittests src/lib.rs (target/x86_64-unknown-linux-gnu/debug/build/vanllia-build/8ead6bdec65df38f/out/vanllia_build-8ead6bdec65df38f)
+
+running 12 tests
+test tests::dependency_cycle_fails_through_the_build_order_path ... ok
+test tests::invalid_image_and_start_references_fail_on_the_build_paths ... ok
+test tests::construction_unit_references_must_resolve ... ok
+test tests::image_mapping_rejects_duplicate_and_missing_entries ... ok
+test tests::missing_bootstrap_dependency_fails_through_the_build_order_path ... ok
+test tests::package_closure_allows_unitless_images_and_shared_loader_images ... ok
+test tests::raw_image_construction_does_not_require_another_unit_file ... ok
+test tests::non_elf_artifact_is_rejected ... ok
+test tests::target_dependencies_participate_in_cycle_and_duplicate_validation ... ok
+test workflow::process::tests::evidence_write_failure_still_stops_owned_child ... ok
+test workflow::process::tests::timeout_stops_owned_execution_and_keeps_evidence ... ok
+test workflow::process::tests::successful_leader_cannot_leave_a_live_descendant ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.11s
+
+     Running unittests src/main.rs (target/x86_64-unknown-linux-gnu/debug/build/vanllia-build/d675ee8555d2dfd8/out/vanllia_build-d675ee8555d2dfd8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/publication.rs (target/x86_64-unknown-linux-gnu/debug/build/vanllia-build/51fa77dea12e601f/out/publication-51fa77dea12e601f)
+
+running 3 tests
+test simultaneous_work_or_output_owner_is_rejected ... ok
+test later_cargo_rebuild_does_not_mutate_returned_snapshot ... ok
+test missing_mapping_cargo_and_pack_failures_preserve_last_complete_image ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s
+
+     Running tests/second_package.rs (target/x86_64-unknown-linux-gnu/debug/build/vanllia-build/0894afddbfbbe087/out/second_package-0894afddbfbbe087)
+
+running 5 tests
+test release_with_debug_assertions_and_dependency_feature_request ... ok
+test same_bin_with_different_features_keeps_both_real_el_artifacts ... ok
+test second_package_and_bin_are_selected_from_real_cargo_artifacts ... ok
+test build_with_packs_each_feature_variant_from_its_own_artifact ... ok
+test distinct_image_names_resolve_and_pack_one_real_cargo_artifact ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.10s
+
+   Doc-tests vanllia_build
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

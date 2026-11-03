@@ -1,0 +1,12 @@
+[
+  {
+    "case": "unit-scenario",
+    "exit": 2,
+    "stderr": "vanllia-build: Unit pipe baseline pipe-integration is missing or is a system scenario\n"
+  },
+  {
+    "case": "cluster-cycle",
+    "exit": 2,
+    "stderr": "vanllia-build: Cluster cycle at pipe-unit\n"
+  }
+]
