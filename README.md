@@ -1,7 +1,7 @@
-# image-builder
+# Vanllia build
 
-Host-only image-builder core, published as package `image-builder` / library
-`image_builder`. It turns explicit unit declarations plus explicit Cargo image
+Host package `vanllia-build`, library `vanllia_build`, CLI `vanllia-build`.
+It turns explicit unit declarations plus explicit Cargo image
 coordinates into one initrd: a manifest of loadable ELF images followed by the
 paged bootstrap capsule. `ImageBuild.image`, `package`, `bin`, `features`,
 `target`, `profile` and `default_features` remain separate coordinates; Cargo's
@@ -17,6 +17,9 @@ authority for every artifact.
   needs, with their `ProgramKind`.
 - `startup_order(declarations, deployment)` — the validated startup sequence.
 - `pub use unit::ImageBuild` — the image coordinate.
+- `Provider` / `collect` — gather explicit UNIT/BUILD facts from prepared roots.
+- `workflow::execute` — the managed source, substitution, build and test workflow
+  shared by the CLI and library. See [DEVELOPMENT.md](DEVELOPMENT.md).
 
 The caller supplies the build root, nested target directory and output path; no
 repository or composition layout is inferred. Nothing here references the
@@ -51,9 +54,13 @@ toolchain's llvm-objcopy on PATH.
   executable; paths are never guessed and valid aliases are not rejected.
 - Progress lines go to stdout (`initrd: …`, `image resolved: …`); the Source CLI
   prints its final `ok  <path>` last.
-- The final `std::fs::write` is not atomic: a failed write can leave a partial
-  output at the requested path. A returned `Err` means that file is not valid.
-  The caller serializes use of one work/output pair.
+- Cargo executables are frozen by SHA-256 before later builds can overwrite
+  the reported Cargo paths. The returned paths refer to these snapshots.
+- Work/output paths have OS locks; conflicting operations fail as busy. The
+  complete initrd is synced to an unpublished sibling file, then renamed.
+  Failure preserves the previous successful output. `work/build.json` records
+  current inputs and the prepared output digest; the returned success is the
+  authority for final publication.
 
 ## Provenance
 
