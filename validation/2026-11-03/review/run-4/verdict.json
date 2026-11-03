@@ -1,0 +1,36 @@
+{
+  "harts": 4,
+  "framework": "1 passed; 0 failed",
+  "semantic": "PASS",
+  "frames": [
+    [
+      "85",
+      "85"
+    ]
+  ],
+  "spawned": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "reaped": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "native_exits": {
+    "6": 0,
+    "5": 0,
+    "3": 0,
+    "2": 0,
+    "1": 0
+  },
+  "resident_numeric_exit": "unobserved; System-controlled retirement",
+  "initrd_sha256": "380b0ad63e96c7d20912175e35fbf0f4fa21b3f84d136e48bdc4a18cc3ae89a9"
+}
