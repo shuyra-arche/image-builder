@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use image_builder::{ImageBuild, build_with, executables};
+use vanllia_build::{ImageBuild, build_with, executables};
 use unit::{ControlConfig, Deployment, Identity, LoaderConfig, OperatorConfig, SupplyConfig, UnitFile};
 
 fn fixture() -> PathBuf {

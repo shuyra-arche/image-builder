@@ -1,17 +1,17 @@
 [package]
-name = "image-builder"
+name = "vanllia-build"
 version = "0.1.0"
 edition = "2024"
 publish = false
 
 [lib]
-name = "image_builder"
+name = "vanllia_build"
 
 # This is an excluded host workspace, including when its checkout is nested in
 # another checkout (Delta worktrees). Do not inherit the enclosing target workspace.
 [workspace]
 
-# Published image-builder core: host library only. It knows explicit declarations,
+# Vanllia host library and CLI. It knows explicit declarations,
 # an explicit Deployment and explicit ImageBuild coordinates; it does not know the
 # in-repo composition or a repository layout.
 
@@ -22,3 +22,8 @@ unit = { git = "https://github.com/shuyra-arche/unit.git", rev = "90396f0fda376e
 system-api = { git = "https://github.com/shuyra-arche/system.git", rev = "9e5d63ca536a176583cf1b0054b4ecf7ddd88257" }
 elf = { version = "0.8", default-features = false }
 serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+sha2 = "0.10"
+toml_edit = "0.23"
+ctrlc = { version = "3", features = ["termination"] }
+libc = "0.2"
