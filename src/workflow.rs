@@ -691,7 +691,6 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
     if verb == "build" || verb == "run" {
         active()?;
         let current = serde_json::json!({"deployment": name, "artifacts": out, "action": verb});
-        json(&context.join(format!("deployment-{name}.json")), &current)?;
         json(&context.join("current.json"), &current)?;
     }
     Ok(out)
