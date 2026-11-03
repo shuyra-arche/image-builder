@@ -15,18 +15,13 @@ diff --git a/tools/shuyra-image/src/main.rs b/tools/shuyra-image/src/main.rs
 index 2bb567e8..3d6dbd6d 100644
 --- a/tools/shuyra-image/src/main.rs
 +++ b/tools/shuyra-image/src/main.rs
-@@ -4,6 +4,8 @@ use std::path::Path;
- 
- use unit::{Deployment, ImageBuild};
- 
+@@ -7,3 +7,5 @@ use unit::{Deployment, ImageBuild};
 +mod managed;
 +
  fn profile(value: &str) -> (&str, &'static str) {
      match value {
          "debug" => ("debug", "dev"),
-@@ -13,6 +15,13 @@ fn profile(value: &str) -> (&str, &'static str) {
- }
- 
+@@ -15,4 +17,11 @@ fn main() {
  fn main() {
 +    if let Some(result) = managed::run(&std::env::args().skip(1).collect::<Vec<_>>()) {
 +        match result {
