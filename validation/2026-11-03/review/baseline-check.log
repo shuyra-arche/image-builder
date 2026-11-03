@@ -1,0 +1,3 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running `target/x86_64-unknown-linux-gnu/debug/vanllia-build --config examples/pipe/vanllia.json --state /workspace/vanllia-review-state override check`
+ok  /workspace/vanllia-review-state/contexts/fdb87300564844dc5c26d224b607fe5fd6078098800f2efc2a3ec9fc2a6a29a2-1793720068317382362

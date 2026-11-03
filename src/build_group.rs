@@ -80,23 +80,12 @@ pub(crate) fn build_group(
     if !group.default_features {
         args.push("--no-default-features".to_string());
     }
-    let output = Command::new(&cargo)
+    let output = crate::workflow::process::capture(Command::new(&cargo)
         .args(&args)
-        .current_dir(root)
-        .output()
-        .map_err(|e| format!("起不动嵌套 cargo：{e}"))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let tail: String = stderr.chars().rev().take(4000).collect::<String>().chars().rev().collect();
-        return Err(format!(
-            "{} 编不过（{}）：\n{tail}",
-            group.package,
-            output.status
-        ));
-    }
+        .current_dir(root))?;
 
     let mut found = Vec::new();
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
+    for line in String::from_utf8_lossy(&output).lines() {
         let line = line.trim();
         if !line.starts_with('{') {
             continue;
@@ -152,5 +141,33 @@ pub(crate) fn build_group(
             _ => return Err(format!("Cargo 对镜像 {} 报出多个执行产物", build.image)),
         }
     }
-    Ok(artifacts)
+    // Freeze Cargo's reported bytes before another coordinate or subsequent
+    // invocation can overwrite the executable path. Valid aliases still share
+    // one path. The caller holds the work lease throughout build and packing.
+    let mut frozen = Vec::new();
+    let mut evidence = Vec::new();
+    for (image, executable) in artifacts {
+        let bytes = std::fs::read(&executable).map_err(|e| e.to_string())?;
+        let parsed = elf::ElfBytes::<elf::endian::AnyEndian>::minimal_parse(&bytes)
+            .map_err(|e| format!("{image}: invalid ELF: {e}"))?;
+        let machine = if group.target.starts_with("riscv64") { Some(243) }
+            else if group.target.starts_with("x86_64") { Some(62) }
+            else if group.target.starts_with("aarch64") { Some(183) } else { None };
+        if machine.is_some_and(|want| parsed.ehdr.e_machine != want) {
+            return Err(format!("{image}: ELF machine does not match {}", group.target));
+        }
+        let digest = crate::publication::digest(&bytes);
+        let path = work.join("artifacts").join(&digest).join(group.builds.iter()
+            .find(|build| build.image == image).unwrap().bin);
+        crate::publication::write(&path, &bytes)?;
+        evidence.push(serde_json::json!({
+            "image": image, "package_id": expected, "manifest": manifest,
+            "target": group.target, "profile": group.profile,
+            "features": group.features, "default_features": group.default_features,
+            "cargo_executable": executable, "snapshot": path, "sha256": digest,
+        }));
+        frozen.push((image, path));
+    }
+    crate::publication::write(&work.join("artifacts.json"), &serde_json::to_vec_pretty(&evidence).unwrap())?;
+    Ok(frozen)
 }

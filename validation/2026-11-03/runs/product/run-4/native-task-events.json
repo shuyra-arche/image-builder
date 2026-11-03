@@ -1,0 +1,395 @@
+{
+  "derived_from": "sqware-diagnose.jsonl",
+  "original_sha256": "654ce639bfaefd0299916c89821b6fa0eb58c57492eb8d96655bf5b23853ed71",
+  "original_bytes": 7818125,
+  "selection": "Spawn/Exit/Reap/FaultKilled/Halt events only",
+  "events": [
+    {
+      "h": 0,
+      "when": 942417,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 1
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 2875255,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 2
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 2884331,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 3
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 8686969,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 4
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 11249914,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 5
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 16181987,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 6
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 17582711,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 7
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 19749221,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 8
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 21923784,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 9
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 23510732,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 10
+          }
+        }
+      }
+    },
+    {
+      "h": 3,
+      "when": 25874002,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 11
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 27854964,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 12
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 59760903,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 13
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 62644093,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 13,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 62699864,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 13
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 73152992,
+      "kind": {
+        "room": {
+          "spawn": {
+            "tid": 14
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 75635307,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 14,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 75656217,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 14
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 76146741,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 12,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 76154127,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 12
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 76580095,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 4
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 76701732,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 6
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 76745763,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 9
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 76850711,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 11
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 76991483,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 8
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 77147873,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 10
+          }
+        }
+      }
+    },
+    {
+      "h": 0,
+      "when": 77285828,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 7
+          }
+        }
+      }
+    },
+    {
+      "h": 2,
+      "when": 77730690,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 5
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 79898936,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 3,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 79905581,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 3
+          }
+        }
+      }
+    },
+    {
+      "h": 3,
+      "when": 79962894,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 2,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 3,
+      "when": 79969637,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 2
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 80045481,
+      "kind": {
+        "room": {
+          "exit": {
+            "tid": 1,
+            "reason": 0
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 80072223,
+      "kind": {
+        "room": {
+          "reap": {
+            "tid": 1
+          }
+        }
+      }
+    },
+    {
+      "h": 1,
+      "when": 80088562,
+      "kind": {
+        "halt": "halt"
+      }
+    }
+  ]
+}

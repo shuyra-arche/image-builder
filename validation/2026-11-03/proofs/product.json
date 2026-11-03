@@ -1,0 +1,128 @@
+{
+  "context": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025",
+  "artifacts": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/attempts/1793717222086290953-65173",
+  "inputs": {
+    "firmware.bin": {
+      "bytes": 277880,
+      "sha256": "c53d58aa9ab17f95fa1af159f0bf05fad5c5622ebc0f1084463435fa6e5752b6"
+    },
+    "initrd.img": {
+      "bytes": 2973696,
+      "sha256": "763ef957669b206f17f5c9a2772ebf66e26d7e8d3c644161e9415dd0f936918b"
+    },
+    "kernel.elf": {
+      "bytes": 1886800,
+      "sha256": "2d37d09be800dae3fbcd8bd07a3dd8dc5975ce89154c86ec8b7d3d850b5b237f"
+    }
+  },
+  "runs": {
+    "4": {
+      "framework": "1 passed; 0 failed",
+      "original_input_driver": "ok",
+      "frames": [
+        [
+          "85",
+          "85"
+        ]
+      ],
+      "spawned": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "reaped": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "native_halts": [
+        "halt"
+      ],
+      "structured_bytes": 7818125,
+      "structured_sha256": "654ce639bfaefd0299916c89821b6fa0eb58c57492eb8d96655bf5b23853ed71",
+      "test_kernel": {
+        "cargo_reported_executable": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/components/kernel/target/riscv64gc-unknown-none-elf/release/build/kernel/955439d8451d3448/out/embedded-955439d8451d3448",
+        "sha256": "b0b748bbc304908d3f26fd9b308b087477acd68a357754be6750dc913a6ecab4",
+        "harts": 4,
+        "original_driver_exit": 0,
+        "initrd_sha256": "763ef957669b206f17f5c9a2772ebf66e26d7e8d3c644161e9415dd0f936918b"
+      }
+    },
+    "8": {
+      "framework": "1 passed; 0 failed",
+      "original_input_driver": "ok",
+      "frames": [
+        [
+          "153",
+          "153"
+        ]
+      ],
+      "spawned": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "reaped": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "native_halts": [
+        "halt"
+      ],
+      "structured_bytes": 7834486,
+      "structured_sha256": "7a44eaa9b559f6b29db1c3456c7b52616d37e9a6fd9712174e8897a7685dbcca",
+      "test_kernel": {
+        "cargo_reported_executable": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/components/kernel/target/riscv64gc-unknown-none-elf/release/build/kernel/955439d8451d3448/out/embedded-955439d8451d3448",
+        "sha256": "b0b748bbc304908d3f26fd9b308b087477acd68a357754be6750dc913a6ecab4",
+        "harts": 8,
+        "original_driver_exit": 0,
+        "initrd_sha256": "763ef957669b206f17f5c9a2772ebf66e26d7e8d3c644161e9415dd0f936918b"
+      }
+    }
+  }
+}

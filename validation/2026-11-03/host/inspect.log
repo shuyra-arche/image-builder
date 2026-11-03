@@ -1,0 +1,20 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target/x86_64-unknown-linux-gnu/debug/vanllia-build --config examples/source/vanllia.json --state /workspace/vanllia-product-state inspect`
+evidence: /workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025
+published: {
+  "action": "run",
+  "artifacts": "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/attempts/1793717222086290953-65173",
+  "deployment": "product"
+}
+evidence: /workspace/vanllia-product-state/contexts/634dbe39159590a2911b46c604a9f5ae671a3c409e48136bd61f0fa30a3225c5-1793716395204132914
+evidence: /workspace/vanllia-product-state/contexts/8920ff3c7bd1e222212784edddfb0def7c6d18ad9e5a3f9b10408a92c45ebc03-1793716899408061384
+published: {
+  "action": "run",
+  "artifacts": "/workspace/vanllia-product-state/contexts/8920ff3c7bd1e222212784edddfb0def7c6d18ad9e5a3f9b10408a92c45ebc03-1793716899408061384/attempts/1793716910767129330-52443",
+  "deployment": "product"
+}
+evidence: /workspace/vanllia-product-state/contexts/8e91a30b99307e71788f162ff85faf9d575bb99506371542a96e33517c7a90c6-1793716815489382223
+evidence: /workspace/vanllia-product-state/contexts/9c7bff5206ca0614a2eaebde456838b8d73aca32c875ee0973a58cfbcc8948a1-1793716613690739639
+evidence: /workspace/vanllia-product-state/contexts/c0db94175d4bd5bd45901b3224f626b741ac724520deb0fbeb6543c931080bfd-1793717165490551814
+evidence: /workspace/vanllia-product-state/contexts/da517e8b4b876aba583e7e8455edc84fa804b79f8aaaacee3500732934478f93-1793717095148639657
+ok  /workspace/vanllia-product-state

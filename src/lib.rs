@@ -1,4 +1,4 @@
-//! image-builder — **造镜像那一步**：编程序（`programs`，含测具那一档）→ 打 initrd → 放到内核 ELF 旁。
+//! Vanllia — explicit sources, Cargo builds, initrd publication and test execution.
 //!
 //! 保留供用户态装载的 ELF 清单，并从引导 ELF 生成页化 capsule。
 //! RX payload 包含完整补零页；内核只消费 capsule，不解析 ELF。
@@ -6,6 +6,9 @@
 
 mod build_group;
 mod capsule;
+mod publication;
+mod provider;
+pub mod workflow;
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -15,6 +18,7 @@ use build_group::{build_group, groups};
 use unit::{Deployment, UnitFile};
 
 pub use unit::ImageBuild;
+pub use provider::{Provider, collect};
 
 /// Expand declared UnitFiles and their image resources into the requested
 /// image inventory. Only `ImageBuild.image` is used to identify an image.
@@ -195,6 +199,7 @@ pub fn executables(
     work: &Path,
     builds: &[ImageBuild],
 ) -> Result<Vec<(&'static str, PathBuf)>, String> {
+    let _lease = publication::leases(&[work])?;
     validate_builds(builds)?;
     let picked: Vec<&ImageBuild> = builds.iter().collect();
     let mut artifacts = Vec::new();
@@ -217,6 +222,7 @@ pub fn build_with(
     deployment: &'static Deployment,
     builds: &[ImageBuild],
 ) -> Result<PathBuf, String> {
+    let _leases = publication::leases(&[work, output])?;
     validate_builds(builds)?;
     let bins = image_inventory(declarations, deployment, builds)?;
     println!(
@@ -277,10 +283,21 @@ pub fn build_with(
     blob[..4].copy_from_slice(&(offset as u32).to_le_bytes());
     blob[4..8].copy_from_slice(&(capsule.len() as u32).to_le_bytes());
 
-    if let Some(dir) = output.parent() {
-        std::fs::create_dir_all(dir).map_err(|e| format!("建 {} 失败：{e}", dir.display()))?;
+    let mut evidence = Vec::new();
+    for (image, snapshot) in &artifacts {
+        let build = builds.iter().find(|build| build.image == *image).unwrap();
+        let bytes = std::fs::read(snapshot).map_err(|e| e.to_string())?;
+        evidence.push(serde_json::json!({"image": image, "snapshot": snapshot,
+            "sha256": publication::digest(&bytes), "manifest": build.manifest,
+            "package": build.package, "bin": build.bin, "target": build.target,
+            "profile": build.profile, "features": build.features, "default_features": build.default_features}));
     }
-    std::fs::write(output, &blob).map_err(|e| format!("写 {} 失败：{e}", output.display()))?;
+    publication::write(&work.join("build.json"), &serde_json::to_vec_pretty(&serde_json::json!({
+        "deployment": deployment.name, "startup": startup_order(declarations, deployment)?,
+        "images": evidence, "prepared_output": output, "output_sha256": publication::digest(&blob),
+    })).map_err(|e| e.to_string())?)?;
+    workflow::active()?;
+    publication::write(output, &blob)?;
     let at = std::fs::canonicalize(output).unwrap_or_else(|_| output.to_path_buf());
     println!(
         "initrd packed: {} ({} B, {} programs)",
@@ -293,8 +310,9 @@ pub fn build_with(
 
 fn validate_builds(builds: &[ImageBuild]) -> Result<(), String> {
     for (index, build) in builds.iter().enumerate() {
-        if build.image.is_empty() || build.package.is_empty() || build.bin.is_empty() {
-            return Err("构建映射缺少 image/package/bin".to_string());
+        if build.image.is_empty() || build.package.is_empty() || build.bin.is_empty()
+            || build.manifest.is_empty() || build.profile.is_empty() || build.target.is_empty() {
+            return Err("构建映射缺少 image/package/bin/manifest/profile/target".to_string());
         }
         if builds[..index]
             .iter()
@@ -328,7 +346,7 @@ fn needed_builds<'a>(
 }
 
 pub(crate) fn package_id(cargo: &str, manifest: &Path, package: &str) -> Result<String, String> {
-    let output = Command::new(cargo)
+    let output = crate::workflow::process::capture(Command::new(cargo)
         .args([
             "metadata",
             "--locked",
@@ -337,14 +355,9 @@ pub(crate) fn package_id(cargo: &str, manifest: &Path, package: &str) -> Result<
             "--no-deps",
             "--manifest-path",
         ])
-        .arg(manifest)
-        .output()
-        .map_err(|e| format!("起不动 cargo metadata：{e}"))?;
-    if !output.status.success() {
-        return Err("cargo metadata 失败".to_string());
-    }
+        .arg(manifest))?;
     let value: serde_json::Value =
-        serde_json::from_slice(&output.stdout).map_err(|e| format!("cargo metadata JSON：{e}"))?;
+        serde_json::from_slice(&output).map_err(|e| format!("cargo metadata JSON：{e}"))?;
     value["packages"]
         .as_array()
         .and_then(|packages| {
@@ -394,26 +407,22 @@ fn slim(src: &Path, out: &Path) -> Result<Vec<u8>, String> {
     let dst = out.join(format!(".slim-{}-{name}", std::process::id()));
     // 失败路径也要收拾：临时文件不留痕（成功路径同样走这里）。
     let r = (|| {
-        let status = Command::new("llvm-objcopy")
+        crate::workflow::process::capture(Command::new("llvm-objcopy")
             .arg("--strip-all")
             .arg(src)
-            .arg(&dst)
-            .status()
+            .arg(&dst))
             .map_err(|e| {
                 format!(
                     "起不动 llvm-objcopy（{e}）——造镜像要它剥符号与调试节：装 llvm 包，或 \
                      `rustup component add llvm-tools` 之后把它放进 PATH"
                 )
             })?;
-        if !status.success() {
-            return Err(format!(
-                "llvm-objcopy 对 {} 报错（{status}）",
-                src.display()
-            ));
-        }
         std::fs::read(&dst).map_err(|e| format!("读瘦好的 {} 失败：{e}", dst.display()))
     })();
-    let _ = std::fs::remove_file(&dst);
+    if let Err(error) = std::fs::remove_file(&dst)
+        && error.kind() != std::io::ErrorKind::NotFound {
+        return Err(format!("slimming_result={:?}; cleanup {}: {error}", r.as_ref().map(Vec::len), dst.display()));
+    }
     r
 }
 

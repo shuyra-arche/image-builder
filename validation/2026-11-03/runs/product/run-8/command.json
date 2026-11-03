@@ -1,0 +1,16 @@
+[
+  "nu",
+  "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/scripts/qtest.nu",
+  "--package",
+  "kernel",
+  "--scene",
+  "product",
+  "--feed-script",
+  "/workspace/vanllia-product-state/contexts/50703cb2e466ec3582f3207a8c8c71d030bf239719dc2a5e0545c49fcc3cc74e-1793717210904833025/sources/source/programs/tests/terminal/session.py",
+  "--",
+  "--test",
+  "embedded",
+  "--features",
+  "semihosting",
+  "--verbose"
+]
