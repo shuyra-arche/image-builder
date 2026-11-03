@@ -1,6 +1,7 @@
 //! Managed development contexts. Products supply their own sources, declarations
 //! host, workspaces, deployments and existing test runners in a JSON manifest.
 mod config;
+mod environment;
 pub(crate) mod process;
 mod source;
 
@@ -147,14 +148,17 @@ fn prepare_context(config: &Config, base: &Path, state: &Path) -> Result<PathBuf
         .map_err(|e| e.to_string())?;
     let library_files = source::snapshot(&library, None)?;
     let mut patch_hashes = Vec::new();
+    let mut patch_inputs = Vec::new();
     for item in &config.sources {
         for patch in &item.patches {
-            patch_hashes.push(publication::digest(
-                &std::fs::read(base.join(patch)).map_err(|e| e.to_string())?,
-            ));
+            let bytes = std::fs::read(base.join(patch)).map_err(|e| e.to_string())?;
+            patch_hashes.push(publication::digest(&bytes));
+            patch_inputs.push(bytes);
         }
     }
+    let build_environment = environment::selected(std::env::vars_os())?;
     let identity = serde_json::json!({"config": config, "overrides": overrides,
+        "build_environment": build_environment,
         "source_files": identities, "library_files": library_files, "patches": patch_hashes});
     let key = publication::digest(&serde_json::to_vec(&identity).unwrap());
     let prepared = state.join("prepared").join(format!("{key}.json"));
@@ -185,7 +189,7 @@ fn prepare_context(config: &Config, base: &Path, state: &Path) -> Result<PathBuf
     std::fs::create_dir_all(&context).map_err(|e| e.to_string())?;
     json(&context.join("identity.json"), &identity)?;
     let result = (|| {
-        source::prepare(config, base, &context, &overrides)?;
+        source::prepare(config, base, &context, &overrides, &patch_inputs)?;
         let sources: serde_json::Value = serde_json::from_slice(
             &std::fs::read(context.join("sources.json")).map_err(|e| e.to_string())?,
         )
@@ -205,6 +209,10 @@ fn prepare_context(config: &Config, base: &Path, state: &Path) -> Result<PathBuf
         let mut rustc = Command::new("rustc");
         rustc.env("RUSTUP_TOOLCHAIN", &config.toolchain).arg("-Vv");
         publication::write(&context.join("rustc.txt"), &capture(&mut rustc)?)?;
+        publication::write(
+            &context.join("cargo.txt"),
+            &capture(cargo(config).arg("--version"))?,
+        )?;
         json(
             &context.join("inputs.json"),
             &serde_json::json!({"sources": source::inventory(&context.join("sources"))?,
@@ -221,7 +229,8 @@ fn prepare_context(config: &Config, base: &Path, state: &Path) -> Result<PathBuf
         json(
             &context.join("failure.json"),
             &serde_json::json!({"error": error}),
-        )?;
+        )
+        .map_err(|record| format!("{error}; preparation failure record failed: {record}"))?;
     }
     result?;
     Ok(context)
@@ -538,6 +547,9 @@ fn validate(config: &Config) -> Result<(), String> {
         }
     }
     for (name, unit) in &config.units {
+        if config.tests.contains_key(name) || config.clusters.contains_key(name) {
+            return Err(format!("Unit {name} conflicts with a test or Cluster name"));
+        }
         source::relative(Path::new(name))?;
         source::relative(&unit.manifest)?;
         if !config
@@ -596,20 +608,15 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
             config.toolchain
         ));
     }
-    std::fs::create_dir_all(state).map_err(|e| e.to_string())?;
-    let state = state.canonicalize().map_err(|e| e.to_string())?;
-    let _lease = publication::leases(&[&state.join("operation")])?;
     let verb = action.first().map(String::as_str).unwrap_or("inspect");
-    if state.join("STOP_UNCONFIRMED").exists() {
-        return Err(format!(
-            "resource stop was not confirmed; context remains reserved: {}",
-            state.join("STOP_UNCONFIRMED").display()
-        ));
-    }
+    let state = source::resolved(state)?;
     if verb == "inspect" {
         // Inspect recorded contexts, including older tool snapshots, without
         // resolving sources or starting Cargo merely to view existing evidence.
         let contexts = state.join("contexts");
+        if state.join("STOP_UNCONFIRMED").exists() {
+            println!("reserved: {}", state.join("STOP_UNCONFIRMED").display());
+        }
         if contexts.is_dir() {
             let mut paths = std::fs::read_dir(&contexts)
                 .map_err(|e| e.to_string())?
@@ -627,6 +634,21 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
             }
         }
         return Ok(state);
+    }
+    source::separate_state(&state, &base.join(&config.library))?;
+    for input in load_overrides(&state)?.values() {
+        source::separate_state(&state, input)?;
+    }
+    if verb == "override" && action.get(1).map(String::as_str) == Some("set") && action.len() == 4 {
+        source::separate_state(&state, Path::new(&action[3]))?;
+    }
+    std::fs::create_dir_all(&state).map_err(|e| e.to_string())?;
+    let _lease = publication::leases(&[&state.join("operation")])?;
+    if state.join("STOP_UNCONFIRMED").exists() {
+        return Err(format!(
+            "resource stop was not confirmed; context remains reserved: {}",
+            state.join("STOP_UNCONFIRMED").display()
+        ));
     }
     if verb == "override" {
         let mut overrides = load_overrides(&state)?;
@@ -681,7 +703,7 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
             for name in tests {
                 let evidence = out.join(&name);
                 std::fs::create_dir_all(&evidence).map_err(|e| e.to_string())?;
-                test(&config, &context, &evidence, &name)?;
+                test_case(&config, &context, &evidence, &name)?;
             }
             Ok(())
         })(),
@@ -690,21 +712,69 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
                 .into(),
         ),
     };
-    json(
-        &out.join("outcome.json"),
-        &serde_json::json!({"action": action, "context": context,
-        "success": result.is_ok(), "error": result.as_ref().err()}),
-    )?;
-    if let Err(error) = &result
-        && error.contains("stop_confirmed=false")
-    {
-        publication::write(&state.join("STOP_UNCONFIRMED"), error.as_bytes())?;
-    }
-    result.map_err(|e| format!("{e}; evidence: {}", out.display()))?;
-    if verb == "build" || verb == "run" {
-        active()?;
-        let current = serde_json::json!({"deployment": name, "artifacts": out, "action": verb});
-        json(&context.join("current.json"), &current)?;
-    }
-    Ok(out)
+    complete_attempt(&state, &context, &out, action, result)
 }
+
+fn complete_attempt(
+    state: &Path,
+    context: &Path,
+    out: &Path,
+    action: &[String],
+    result: Result<(), String>,
+) -> Result<PathBuf, String> {
+    let verb = action.first().map(String::as_str).unwrap_or("");
+    let name = action.get(1).map(String::as_str).unwrap_or("");
+    let result: Result<(), String> = (|| {
+        result?;
+        active()?;
+        if verb == "build" || verb == "run" {
+            // This file records preparation, not committed publication. Only
+            // the single atomic pointer establishes deployment success.
+            json(
+                &out.join("outcome.json"),
+                &serde_json::json!({
+                    "action": action, "context": context, "phase": "prepared", "success": null,
+                }),
+            )?;
+            active()?;
+            json(
+                &context.join("current.json"),
+                &serde_json::json!({
+                    "deployment": name, "artifacts": out, "action": verb,
+                    "phase": "published", "success": true,
+                }),
+            )?;
+        } else {
+            json(
+                &out.join("outcome.json"),
+                &serde_json::json!({
+                    "action": action, "context": context, "phase": "completed", "success": true,
+                }),
+            )?;
+        }
+        Ok(())
+    })();
+    if let Err(mut error) = result {
+        // Reserve before any fallible diagnostic write; preserve the primary
+        // execution/stop error even when evidence storage itself is failing.
+        if error.contains("stop_confirmed=false")
+            && let Err(reservation) =
+                publication::write(&state.join("STOP_UNCONFIRMED"), error.as_bytes())
+        {
+            error = format!("{error}; reservation failed: {reservation}");
+        }
+        if let Err(record) = json(
+            &out.join("outcome.json"),
+            &serde_json::json!({
+                "action": action, "context": context, "phase": "failed", "success": false, "error": error,
+            }),
+        ) {
+            error = format!("{error}; outcome record failed: {record}");
+        }
+        return Err(format!("{error}; evidence: {}", out.display()));
+    }
+    Ok(out.to_path_buf())
+}
+
+#[cfg(test)]
+mod tests;

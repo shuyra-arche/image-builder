@@ -37,6 +37,9 @@ snapshotted. Gitlinks are separate declared sources; symlinks/special files fail
 preparation. Source/library snapshots are checked for changes during preparation.
 Changed local bytes select a distinct context. Clearing substitution selects the
 fixed baseline without restoring files over a shared lock.
+State paths inside the library or any active/proposed override checkout are
+rejected before creating files, including paths reached through parent symlinks.
+`inspect` is read only, including for absent or reserved states.
 
 ## Explicit product configuration
 
@@ -63,6 +66,9 @@ commands use `--locked`. There is no second complete package lock format.
 Prepared inputs are verified before reuse. Failed preparation is retained;
 retry uses an independent context. Tool/config/patch changes select a new context.
 Ordinary execution does not update an existing baseline or a user lockfile.
+Patch bytes are frozen before application. Selected compiler/target/profile
+environment overrides participate in context identity; credential variables are
+never included. Source files reached through symlink ancestors are rejected.
 
 Units declare their own source/workspace and baseline tests. A baseline must be
 a host or target test from that Unit's source; it cannot silently select a system
@@ -71,6 +77,8 @@ existing runner) or scenario (build/run a selected test deployment). Clusters
 can nest and organize Units/shared crates; collaboration acceptance runs only
 declared scenarios. No
 scenario means an error. Repository, workspace, Cluster and Unit need not coincide.
+Unit names cannot collide with test or Cluster names; Cluster scenarios resolve
+directly to their declared test deployment rather than through Unit selection.
 
 Runner arguments are argv, not shell recipes. Substitutions: `{sources}`, `{tool}`,
 `{initrd}`, `{kernel}`, `{firmware}`, `{evidence}`, `{harts}`; target-test runners
@@ -118,6 +126,10 @@ build/run attempts replace published deployment pointers. Failed runs never
 start an earlier initrd and preserve the previous pointer. Different deployment,
 configuration and baseline/override contexts have isolated outputs. `build`
 establishes artifact production; `run` establishes declared runner acceptance.
+For build/run attempts, `outcome.json` records the `prepared` phase without a
+success claim. The single atomic `current.json` pointer records `published` and
+establishes success; publication errors produce a failed outcome. Diagnostic
+write failures preserve the original error and unconfirmed-stop reservation.
 
 Evidence includes source revisions/file hashes, patch hashes, original/development
 lock identities, workspace Cargo metadata, Rust version, commands/status/timing,

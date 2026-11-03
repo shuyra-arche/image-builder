@@ -5,6 +5,44 @@ use std::process::Command;
 use super::{config::Config, process::capture};
 use crate::publication;
 
+// Resolve existing ancestors before comparing paths, including a not-yet-created
+// state reached through a symlink. This function never creates directories.
+pub(super) fn resolved(path: &Path) -> Result<PathBuf, String> {
+    let absolute = std::path::absolute(path).map_err(|e| e.to_string())?;
+    for ancestor in absolute.ancestors() {
+        match ancestor.canonicalize() {
+            Ok(mut root) => {
+                for component in absolute.strip_prefix(ancestor).unwrap().components() {
+                    match component {
+                        Component::Normal(name) => root.push(name),
+                        Component::ParentDir => {
+                            root.pop();
+                        }
+                        Component::CurDir => {}
+                        _ => return Err("invalid state path".into()),
+                    }
+                }
+                return Ok(root);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.to_string()),
+        }
+    }
+    Err(format!("cannot resolve {}", path.display()))
+}
+
+pub(super) fn separate_state(state: &Path, input: &Path) -> Result<(), String> {
+    let input = resolved(input)?;
+    if state.starts_with(&input) {
+        return Err(format!(
+            "state {} must be outside input checkout {}",
+            state.display(),
+            input.display()
+        ));
+    }
+    Ok(())
+}
+
 pub(super) fn relative(path: &Path) -> Result<(), String> {
     if path.as_os_str().is_empty()
         || path
@@ -34,6 +72,21 @@ pub(super) fn snapshot(
     for name in listed.split(|byte| *byte == 0).filter(|s| !s.is_empty()) {
         let name = std::str::from_utf8(name).map_err(|e| e.to_string())?;
         relative(Path::new(name))?;
+        let mut component_path = root.to_path_buf();
+        for component in Path::new(name).components() {
+            component_path.push(component);
+            match component_path.symlink_metadata() {
+                Ok(metadata) if metadata.is_symlink() => {
+                    return Err(format!(
+                        "source snapshot rejects symlink {}",
+                        component_path.display()
+                    ));
+                }
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+                Err(error) => return Err(error.to_string()),
+            }
+        }
         let path = root.join(name);
         let metadata = match path.symlink_metadata() {
             Ok(metadata) => metadata,
@@ -103,7 +156,18 @@ pub(super) fn prepare(
     base: &Path,
     attempt: &Path,
     overrides: &BTreeMap<String, PathBuf>,
+    patch_inputs: &[Vec<u8>],
 ) -> Result<(), String> {
+    if patch_inputs.len()
+        != config
+            .sources
+            .iter()
+            .map(|s| s.patches.len())
+            .sum::<usize>()
+    {
+        return Err("prepared patch input count mismatch".into());
+    }
+    let mut patch_inputs = patch_inputs.iter().enumerate();
     let sources = attempt.join("sources");
     std::fs::create_dir_all(&sources).map_err(|e| e.to_string())?;
     let mut evidence = Vec::new();
@@ -185,16 +249,20 @@ pub(super) fn prepare(
         };
         let mut patches = Vec::new();
         for patch in &source.patches {
-            let patch = base.join(patch).canonicalize().map_err(|e| e.to_string())?;
-            let bytes = std::fs::read(&patch).map_err(|e| e.to_string())?;
+            let (index, bytes) = patch_inputs.next().ok_or("missing prepared patch input")?;
+            let saved = attempt.join("patches").join(format!("{index}.patch"));
+            publication::write(&saved, bytes)?;
             capture(
                 Command::new("git")
                     .arg("-C")
                     .arg(&root)
                     .arg("apply")
-                    .arg(&patch),
+                    .arg(&saved),
             )?;
-            patches.push(serde_json::json!({"file": patch, "sha256": publication::digest(&bytes)}));
+            patches.push(
+                serde_json::json!({"file": base.join(patch), "snapshot": saved,
+                "sha256": publication::digest(bytes)}),
+            );
         }
         evidence.push(serde_json::json!({"name": source.name, "git": source.git,
             "baseline": source.rev, "head": head, "override": overrides.get(&source.name),
@@ -205,6 +273,9 @@ pub(super) fn prepare(
         &serde_json::to_vec_pretty(&evidence).unwrap(),
     )
 }
+
+#[cfg(test)]
+mod tests;
 
 pub(super) fn configure(config: &Config, base: &Path, attempt: &Path) -> Result<(), String> {
     let sources = attempt.join("sources");

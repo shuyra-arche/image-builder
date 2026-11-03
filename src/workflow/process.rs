@@ -180,9 +180,18 @@ pub(super) fn run(command: &mut Command, evidence: &Path, timeout: u64) -> Resul
     } else {
         result
     };
+    record_result(evidence, pid, started.elapsed().as_millis(), result)
+}
+
+fn record_result(
+    evidence: &Path,
+    pid: u32,
+    elapsed_ms: u128,
+    result: Result<(), String>,
+) -> Result<(), String> {
     publication::write(&evidence.join("result.json"), &serde_json::to_vec_pretty(&serde_json::json!({
-        "pid": pid, "success": result.is_ok(), "result": format!("{result:?}"), "elapsed_ms": started.elapsed().as_millis(),
-    })).unwrap())?;
+        "pid": pid, "success": result.is_ok(), "result": format!("{result:?}"), "elapsed_ms": elapsed_ms,
+    })).unwrap()).map_err(|record| format!("execution={result:?}; result record failed: {record}"))?;
     result
 }
 
@@ -233,6 +242,17 @@ mod tests {
         assert_eq!(result["success"], false);
         let pid = result["pid"].as_u64().unwrap();
         assert!(!Path::new(&format!("/proc/{pid}")).exists());
+        std::fs::remove_dir_all(path).unwrap();
+    }
+
+    #[test]
+    fn result_record_failure_preserves_unconfirmed_stop() {
+        let path =
+            std::env::temp_dir().join(format!("vanllia-result-failure-{}", std::process::id()));
+        std::fs::create_dir_all(path.join("result.json")).unwrap();
+        let error = record_result(&path, 0, 0, Err("stop_confirmed=false".into())).unwrap_err();
+        assert!(error.contains("stop_confirmed=false"), "{error}");
+        assert!(error.contains("result record failed"), "{error}");
         std::fs::remove_dir_all(path).unwrap();
     }
 }

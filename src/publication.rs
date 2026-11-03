@@ -8,7 +8,10 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 pub(crate) fn leases(paths: &[&Path]) -> Result<Vec<File>, String> {
     let mut names = Vec::new();
     for path in paths {
-        let resolved = if path.exists() {
+        // Cargo work directories follow directory aliases. Publication replaces
+        // a file's directory entry, so its final component must stay stable even
+        // when that entry starts as a symlink and rename replaces it.
+        let resolved = if path.is_dir() {
             path.canonicalize().map_err(|e| e.to_string())?
         } else {
             path.to_path_buf()
@@ -78,3 +81,6 @@ pub(crate) fn digest(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
     format!("{:x}", Sha256::digest(bytes))
 }
+
+#[cfg(test)]
+mod tests;
