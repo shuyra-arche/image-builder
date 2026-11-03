@@ -606,6 +606,28 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
             state.join("STOP_UNCONFIRMED").display()
         ));
     }
+    if verb == "inspect" {
+        // Inspect recorded contexts, including older tool snapshots, without
+        // resolving sources or starting Cargo merely to view existing evidence.
+        let contexts = state.join("contexts");
+        if contexts.is_dir() {
+            let mut paths = std::fs::read_dir(&contexts)
+                .map_err(|e| e.to_string())?
+                .map(|entry| entry.map(|e| e.path()))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?;
+            paths.sort();
+            for context in paths {
+                println!("evidence: {}", context.display());
+                match std::fs::read_to_string(context.join("current.json")) {
+                    Ok(record) => println!("published: {record}"),
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => return Err(error.to_string()),
+                }
+            }
+        }
+        return Ok(state);
+    }
     if verb == "override" {
         let mut overrides = load_overrides(&state)?;
         match action.get(1).map(String::as_str) {
@@ -634,15 +656,6 @@ pub fn execute(config_path: &Path, state: &Path, action: &[String]) -> Result<Pa
     }
     let context = prepare(&config, base, &state)?;
     if verb == "prepare" {
-        return Ok(context);
-    }
-    if verb == "inspect" {
-        println!("context: {}", context.display());
-        println!(
-            "{}",
-            std::fs::read_to_string(context.join("current.json"))
-                .unwrap_or_else(|_| "no published deployment".into())
-        );
         return Ok(context);
     }
     let stamp = SystemTime::now()
