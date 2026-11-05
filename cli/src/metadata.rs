@@ -1,4 +1,4 @@
-mod output;
+pub(crate) mod output;
 mod package;
 mod target;
 
@@ -56,6 +56,7 @@ pub fn read(manifests: &BTreeSet<PathBuf>) -> Result<Vec<Image>, Error> {
                     .map(|target| Image {
                         name: target.name,
                         manifest: path.clone(),
+                        workspace: metadata.workspace_root.clone(),
                         package: package.name.clone(),
                         package_id: package.id.clone(),
                     }),
@@ -64,4 +65,31 @@ pub fn read(manifests: &BTreeSet<PathBuf>) -> Result<Vec<Image>, Error> {
     }
     images.sort_by(|left, right| (&left.name, &left.manifest).cmp(&(&right.name, &right.manifest)));
     Ok(images)
+}
+
+pub(crate) fn observe(manifest: &std::path::Path) -> Result<Output, Error> {
+    let output = Command::new(std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into()))
+        .current_dir(manifest.parent().unwrap())
+        .args([
+            "metadata",
+            "--format-version",
+            "1",
+            "--no-deps",
+            "--offline",
+            "--locked",
+            "--manifest-path",
+        ])
+        .arg(manifest)
+        .output()
+        .map_err(|e| error::io(manifest, e))?;
+    if !output.status.success() {
+        return Err(Error::Cargo {
+            manifest: manifest.to_path_buf(),
+            message: String::from_utf8_lossy(&output.stderr).into_owned(),
+        });
+    }
+    serde_json::from_slice(&output.stdout).map_err(|e| Error::Cargo {
+        manifest: manifest.to_path_buf(),
+        message: e.to_string(),
+    })
 }

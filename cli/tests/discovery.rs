@@ -107,6 +107,43 @@ fn uninitialized_submodules_are_not_silently_treated_as_empty_sources() {
 }
 
 #[test]
+fn an_explicit_checkout_replaces_an_uninitialized_submodule_without_fetching_it() {
+    let fixture = Fixture::new();
+    fixture.project();
+    let local = Fixture::new();
+    local.binary("provider", "provider");
+    git(&local.root, &["init", "-q"]);
+    git(
+        &local.root,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "git@github.com:example/provider.git",
+        ],
+    );
+    fixture.write(".gitmodules", "[submodule \"provider\"]\npath=components/provider\nurl=https://github.com/example/provider.git\n");
+    fixture.write(
+        "vanllia.toml",
+        &format!(
+            "schema=1\nunits=['probe']\n[boot]\nsystem='system'\n[sources.provider]\npath={:?}\n",
+            local.root.to_str().unwrap()
+        ),
+    );
+    let project = config::read(&fixture.root.join("vanllia.toml")).unwrap();
+    vanllia::preparation::prepare(&fixture.root, &project, vanllia::preparation::Mode::Locked)
+        .unwrap();
+    let files = discovery::discover(&fixture.root, &project).unwrap();
+    assert!(files.roots.contains(&local.root));
+    assert!(!fixture.root.join("components/provider").exists());
+    assert_eq!(vanllia::load(&fixture.root).unwrap().units().len(), 4);
+    assert_eq!(
+        vanllia::overlay::discover(&files).unwrap()[0].source,
+        "https://github.com/example/provider.git"
+    );
+}
+
+#[test]
 fn cli_plan_works_from_a_component_and_does_not_save_a_deployment() {
     let fixture = Fixture::new();
     fixture.project();

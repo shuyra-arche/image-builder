@@ -1,5 +1,5 @@
 use crate::{Error, config::Project, error, source::SourceFiles, source_state::SourceState};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
@@ -32,28 +32,18 @@ pub fn source_state(path: &Path) -> Result<SourceState, Error> {
 }
 
 pub fn discover(root: &Path, project: &Project) -> Result<SourceFiles, Error> {
+    let explicit = crate::preparation::locate(root, project)?;
+    let overrides = crate::repository::overrides(&explicit)?;
     let mut pending = BTreeSet::from([root.to_path_buf()]);
-    for source in project.sources.values() {
-        if source.path.as_os_str().is_empty() {
-            return Err(Error::Declaration {
-                path: root.join("vanllia.toml"),
-                message: "source.path must be nonempty".into(),
-            });
-        }
-        match source_state(&root.join(&source.path))? {
-            SourceState::Available(root) => {
-                pending.insert(root);
-            }
-            SourceState::Missing(path) => return Err(Error::SourceMissing(path)),
-        }
-    }
+    pending.extend(explicit);
     let mut visited = BTreeSet::new();
     let mut files = SourceFiles::default();
     while let Some(source) = pending.pop_first() {
         if !visited.insert(source.clone()) {
             continue;
         }
-        pending.extend(submodules(&source)?);
+        files.roots.insert(source.clone());
+        pending.extend(submodules(&source, &overrides)?);
         if source.join(".git").exists() {
             git_files(&source, &mut files)?;
         } else {
@@ -72,6 +62,9 @@ fn record(path: PathBuf, files: &mut SourceFiles) {
     match path.file_name().and_then(|name| name.to_str()) {
         Some("unit.toml") => {
             files.units.insert(path);
+        }
+        Some("test.toml") => {
+            files.tests.insert(path);
         }
         Some("Cargo.toml") => {
             files.manifests.insert(path);
@@ -168,7 +161,10 @@ fn git_files(root: &Path, files: &mut SourceFiles) -> Result<(), Error> {
     Ok(())
 }
 
-fn submodules(root: &Path) -> Result<Vec<PathBuf>, Error> {
+pub(crate) fn submodule_paths(
+    root: &Path,
+    overrides: &BTreeMap<String, PathBuf>,
+) -> Result<Vec<PathBuf>, Error> {
     let config = root.join(".gitmodules");
     if !config.is_file() {
         return Ok(Vec::new());
@@ -194,7 +190,7 @@ fn submodules(root: &Path) -> Result<Vec<PathBuf>, Error> {
     })?;
     text.lines()
         .map(|line| {
-            let (_, name) = line.split_once(' ').ok_or_else(|| Error::Declaration {
+            let (key, name) = line.split_once(' ').ok_or_else(|| Error::Declaration {
                 path: config.clone(),
                 message: "invalid submodule path record".into(),
             })?;
@@ -210,14 +206,49 @@ fn submodules(root: &Path) -> Result<Vec<PathBuf>, Error> {
                 });
             }
             let path = root.join(relative);
+            if !overrides.is_empty() {
+                let stem = key
+                    .strip_suffix(".path")
+                    .ok_or_else(|| Error::Declaration {
+                        path: config.clone(),
+                        message: "invalid submodule key".into(),
+                    })?;
+                let url = Command::new("git")
+                    .args(["config", "--file"])
+                    .arg(&config)
+                    .arg("--get")
+                    .arg(format!("{stem}.url"))
+                    .output()
+                    .map_err(|e| error::io(&config, e))?;
+                if url.status.success() {
+                    let url = String::from_utf8(url.stdout).map_err(|e| Error::Declaration {
+                        path: config.clone(),
+                        message: e.to_string(),
+                    })?;
+                    if let Some(selected) = overrides.get(&crate::repository::normalize(&url)) {
+                        return Ok(selected.clone());
+                    }
+                }
+            }
+            Ok(path)
+        })
+        .collect()
+}
+
+fn submodules(root: &Path, overrides: &BTreeMap<String, PathBuf>) -> Result<Vec<PathBuf>, Error> {
+    submodule_paths(root, overrides)?
+        .into_iter()
+        .map(|path| {
             if !path.join(".git").exists() {
                 return Err(Error::SourceMissing(path));
             }
             let resolved = path.canonicalize().map_err(|e| error::io(&path, e))?;
-            if !resolved.starts_with(root) {
+            if !resolved.starts_with(root)
+                && !overrides.values().any(|selected| *selected == resolved)
+            {
                 return Err(Error::Declaration {
-                    path: config.clone(),
-                    message: format!("submodule escapes source root: {name}"),
+                    path: root.join(".gitmodules"),
+                    message: format!("submodule escapes source root: {}", path.display()),
                 });
             }
             Ok(resolved)

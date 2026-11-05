@@ -2,7 +2,7 @@
 //! host, workspaces, deployments and existing test runners in a JSON manifest.
 mod config;
 mod environment;
-pub(crate) mod process;
+pub mod process;
 mod source;
 
 pub use config::{

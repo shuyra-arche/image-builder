@@ -3,9 +3,19 @@ name = "vanllia-build"
 version = "0.1.0"
 edition = "2024"
 publish = false
+autobins = false
+autotests = false
 
 [lib]
 name = "vanllia_build"
+
+[[test]]
+name = "publication"
+path = "tests/publication.rs"
+
+[[test]]
+name = "second_package"
+path = "tests/second_package.rs"
 
 # This is an excluded host workspace, including when its checkout is nested in
 # another checkout (Delta worktrees). Do not inherit the enclosing target workspace.

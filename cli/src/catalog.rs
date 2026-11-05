@@ -27,7 +27,13 @@ pub fn index(
 ) -> Result<Catalog, Error> {
     let mut unit_index: BTreeMap<String, Declaration> = BTreeMap::new();
     for declaration in units {
-        declaration.unit.validate(&declaration.path)?;
+        declaration
+            .unit
+            .validate()
+            .map_err(|why| Error::Declaration {
+                path: declaration.path.clone(),
+                message: why.to_string(),
+            })?;
         let id = declaration.unit.id.clone();
         if let Some(previous) = unit_index.get(&id) {
             return Err(Error::Duplicate {

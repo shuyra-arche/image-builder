@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum Error {
+    Workflow(String),
     Io {
         path: PathBuf,
         source: std::io::Error,
@@ -29,6 +30,9 @@ pub enum Error {
         unit: String,
         image: String,
     },
+    UnknownResource {
+        resource: String,
+    },
     EmptySelection,
     Cycle(Vec<String>),
     RootMissing(PathBuf),
@@ -38,6 +42,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Workflow(message) => f.write_str(message),
             Self::Io { path, source } => write!(f, "{}: {source}", path.display()),
             Self::Declaration { path, message } => write!(f, "{}: {message}", path.display()),
             Self::Cargo { manifest, message } => {
@@ -58,6 +63,10 @@ impl fmt::Display for Error {
             Self::UnknownImage { unit, image } => {
                 write!(f, "Unit `{unit}` references unknown Cargo bin `{image}`")
             }
+            Self::UnknownResource { resource } => write!(
+                f,
+                "initrd resource `{resource}` has no image, file or System runtime declaration"
+            ),
             Self::EmptySelection => {
                 f.write_str("no Unit selected; set `units` in vanllia.toml or pass --unit")
             }

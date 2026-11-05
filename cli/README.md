@@ -1,119 +1,151 @@
-# Vanllia CLI: declaration discovery and planning
+# Vanllia
 
-This is the first implementation slice of the new standalone `vanllia` CLI.
-It supports `check` and `plan` over prepared source checkouts. Building product
-ELFs, preparing remote sources, encoding runtime Units, and booting System are
-subsequent slices; these commands do not claim to validate those behaviors.
-
-Install the host executable from this checkout:
+`vanllia` discovers provider-owned `unit.toml` files, selects the required Units,
+builds Cargo bins and packages their binary declarations and images into initrd.
+Deployment exists only in host memory. System reads the initrd and creates
+startup instances; requested Units remain available for runtime creation.
 
 ```sh
-cargo install --path cli --locked
+cargo install --path cli --locked --target x86_64-unknown-linux-gnu
+vanllia fetch --root /path/to/product
 vanllia check --root /path/to/product
 vanllia plan --root /path/to/product
-vanllia plan --root /path/to/product --unit test.pipe-roundtrip
+vanllia build --root /path/to/product
 ```
 
-The CLI searches upwards from the current directory or `--root` for
-`vanllia.toml`. Repeated `--unit ID` arguments replace the product's default root
-selection. System is always included as the separately declared boot entry.
-An absent default selection requires an explicit selection, which can select
-System alone. `check` validates the entire discovered catalog; `plan` validates
-the selected startup graph and prints the selection reasons and Cargo bindings.
+Use a nightly Cargo with `resolver.lockfile-path`, the RV64 target and LLVM
+tools (`llvm-objcopy` on PATH). Validation used nightly-2026-10-09; the historical
+toolchain pin is unchanged. Cargo provides compilation, dependency resolution
+and caching. The former `vanllia-build` executable has been retired.
 
-## Product input
+## Product configuration
 
-The current draft schema covers the inputs needed for Unit discovery and
-planning. Kernel, firmware and platform configuration will be added together
-with the executable build path, rather than accepted without validation.
+The CLI searches upward for an independent `vanllia.toml`:
 
 ```toml
 schema = 1
 units = ["pipe"]
-
 [boot]
 system = "system"
-
+[boot.kernel]
+image = "shuyra"
+[platform]
+target = "riscv64gc-unknown-none-elf"
+profile = "release"
+[sources.runtime]
+git = "https://github.com/shuyra-arche/system.git"
+branch = "codex/dynamic-unit-runtime"
 [sources.pipe]
 path = "components/pipe"
+[runner]
+machine = "virt"
+memory = "256M"
+cpus = 1
+timeout = 60
 ```
 
-The product root is itself a source. Explicit source paths are relative to the
-entry configuration directory and may refer to separately checked-out local
-repositories. Initialized Git submodules are discovered recursively. Missing
-declared sources or uninitialized submodules are errors. This slice does not
-fetch them or advance their versions. Source configuration names identify
-checkouts, not a list of their Units.
+Repeated `--unit ID` replaces the default selection. System is always included.
+`check` and `plan` are read only, including locks and source preparation.
+`build` prepares missing sources; `--offline` requires prepared sources and
+cached inputs. Only the entry configuration supplies product defaults.
 
-Only the entry `vanllia.toml` supplies product defaults. A dependency checkout's
-own product configuration does not add its default Units to this invocation.
+The root, explicit source repositories and registered submodules form the source
+scope. TOML files and Cargo bins are discovered automatically. Outputs, caches,
+symlinks and unregistered nested repositories are excluded. Explicit sources
+replace registered submodules with the same origin; conflicting explicit copies
+fail. Unit IDs and Cargo bin names are independently unique.
 
-## Unit input
+Git sources accept `branch`, `tag`, `rev`, or the remote default, then lock an
+actual commit in `vanllia.lock`. `fetch --update` refreshes the lock explicitly.
+Failed preparation preserves the previous lock. Managed checkouts must be clean.
+Cargo owns Rust dependency locks; Vanllia writes resolution locks outside the
+developer source trees.
 
-This draft covers the runtime identity, loader configuration, and selection and
-ordering dependencies. Operator, identity, supply and the remaining control
-semantics will be introduced with the runtime codec; they are currently rejected
-as unsupported fields rather than silently discarded.
+## Local development
+
+```sh
+vanllia workspace --root /path/to/product --source runtime=/work/system
+vanllia workspace --root /path/to/product --manifest /work/system/server/Cargo.toml
+vanllia workspace --root /path/to/product --reset-source runtime
+```
+
+Choices live in ignored `.vanllia/overrides.toml`; shared source policy and its
+Git pin remain intact. Cargo-native patches bind selected local packages during
+the build. Optional editor output contains the same Cargo configuration, linked
+workspace and target for rust-analyzer. Copy its settings into the editor; the
+CLI leaves existing editor settings untouched. Uncommitted local edits are used
+directly. Build receipts record the actual source hashes.
+
+## Unit declaration
 
 ```toml
 schema = 1
 id = "test.pipe-roundtrip"
-
 [loader]
 image = "test-pipe-roundtrip"
 space = "user"
-args = []
-stack = 0
-
 [control]
+creation = "startup"
+ending = "transient"
 requires = ["pipe"]
 after = ["pipe"]
 ```
 
-`loader.image` names a Cargo bin target. Manifest paths, Cargo package identity
-and source ownership are obtained from Cargo metadata; Unit declarations do not
-repeat them. Several Units can reference one bin. Distinct bins with the same
-name are ambiguous and rejected. Unit IDs are separately unique across the
-selected source scope, independently of file location.
+The shared Unit SDK validates loader, namespace, identity, control and supply
+policy and encodes a versioned record. Quote decimal or hexadecimal values above
+TOML's signed integer range. Cargo metadata supplies package/bin ownership;
+several Unit IDs can share one image. `requires` grows a finite inclusion set and
+can be cyclic. `after` waits only for selected Units and never expands selection;
+unknown references and selected wait cycles fail. `creation = "requested"`
+retains a Unit without initially creating it. Every selected Unit is packaged.
 
-`requires` only grows the necessary set. Mutual `requires` edges are permitted
-and terminate through set closure. `after` orders selected Units and never adds
-Units to that set. An `after` target present in the catalog but absent from the
-selection contributes no edge. Every reference must nevertheless resolve to a
-known Unit. Only cycles in the selected `after` graph block the plan. The printed
-topological order is one deterministic valid order, not an additional waiting
-dependency between adjacent entries. The System boot entry cannot require or
-wait for Units that it has not loaded yet.
+Runtime images are stripped once; debug executables remain on the host. Raw
+resources can be declared in `[package.metadata.vanllia.resources]` by name/path.
+System declares its generated boot-ledger supplies in the same table's
+`runtime_resources` array; these remain runtime resources instead of file inputs.
+Construction targets must be in the required inclusion set. Kernel and firmware
+are separate boot artifacts. Build publication atomically exposes one complete
+directory containing initrd, hashes, native Cargo locks and source evidence.
+A failed build leaves previous artifacts intact.
 
-## Discovery and execution boundaries
+## Tests and exact artifacts
 
-- Git source roots use tracked and untracked, nonignored files. Ordinary
-  directories are recursively scanned. `.git`, `target`, `.vanllia`, `.cache`,
-  `node_modules`, and `vendor` trees are excluded.
-- Directory and file symlinks are not followed during discovery. Unregistered
-  nested Git repositories are skipped; a separately declared local source or
-  initialized submodule establishes its own boundary.
-- `cargo metadata --no-deps --locked --offline --format-version 1` obtains bin
-  targets. Only manifests actually discovered in the declared source scope are
-  indexed, even when a Cargo workspace contains additional members outside it.
-- Discovery observes filesystem and Cargo facts. Catalog validation and the
-  planner are pure functions over owned declarations and these facts.
-- Source availability is represented by explicit enum variants. The indexed
-  catalog is a validated input phase; the resulting `Deployment` is an owned,
-  in-memory value. It has no serialization implementation and is not written to
-  a deployment file.
-- No product compilation, build script, QEMU process, product output, or lockfile
-  update is performed by `check` or `plan`.
+New integration cases are Rust guest bins with `unit.toml` and `test.toml`:
 
-Run the host tests using the configured toolchain:
+```toml
+schema = 1
+name = "pipe.roundtrip"
+unit = "test.pipe-roundtrip"
+expected = "clean"
+timeout = 60
+```
+
+```sh
+vanllia test -- --list
+vanllia test -- pipe.roundtrip
+vanllia run --artifact /path/to/.vanllia/artifacts/BUILD
+```
+
+Each case builds its test Unit, necessary providers and System. The runner
+requires `[boot.firmware]` with either `path` or HTTPS `url`, a SHA-256 and byte
+length. It validates artifacts and snapshots the exact bytes into a fresh run
+directory. Cancellation and timeout stop and reap the owned process group.
+`run --artifact` uses the saved artifact without rebuilding or adding a test Unit.
+
+System forwards versioned typed frames containing native task exits and
+acknowledged retirement. Verdicts require the expected exit cause/reason, every
+instance reclaimed and successful System completion. Supported expectations are
+`clean`, `{ exit = 17 }` and `fault`. Fault matches the native fault category;
+it does not identify an ISA exception code. Diagnostic prose cannot produce a
+pass. Missing, truncated or invalid protocol evidence fails. Kernel event logging
+is not required.
+
+Host tests include real RV64 fixture builds, tampered artifact rejection, source
+locks, local overlays, editor resolution and receipt state transitions. The new
+Pipe case remains build validation until guest acceptance runs. Old scenarios
+and their tests are not migrated in this change.
 
 ```sh
 cargo test -p vanllia --target x86_64-unknown-linux-gnu --locked
 cargo clippy -p vanllia --all-targets --target x86_64-unknown-linux-gnu --locked -- -D warnings
-cargo fmt -p vanllia -- --check
 ```
-
-The Rust tests exercise selection closure, startup constraints, declaration
-conflicts, repository boundaries, real Cargo metadata, and invocation from a
-component directory. A fixture build script deliberately fails if executed,
-ensuring planning does not accidentally compile fixture products.

@@ -27,7 +27,9 @@ fn declaration(id: &str, requires: &[&str], after: &[&str]) -> Declaration {
             control: Control {
                 requires: requires.iter().map(|id| (*id).into()).collect(),
                 after: after.iter().map(|id| (*id).into()).collect(),
+                ..Control::default()
             },
+            ..Unit::default()
         },
     }
 }
@@ -39,6 +41,7 @@ fn index(mut units: Vec<Declaration>, roots: &[&str]) -> Result<Catalog, Error> 
         .map(|declaration| Image {
             name: declaration.unit.loader.image.clone(),
             manifest: declaration.path.with_file_name("Cargo.toml"),
+            workspace: declaration.path.parent().unwrap().to_path_buf(),
             package: declaration.unit.id.clone(),
             package_id: declaration.unit.id.clone(),
         })
@@ -49,8 +52,13 @@ fn index(mut units: Vec<Declaration>, roots: &[&str]) -> Result<Catalog, Error> 
             units: roots.iter().map(|id| (*id).into()).collect(),
             boot: Boot {
                 system: "system".into(),
+                kernel: None,
+                firmware: None,
             },
+            platform: None,
+            runner: None,
             sources: BTreeMap::new(),
+            overrides: BTreeMap::new(),
         },
         units,
         images,
