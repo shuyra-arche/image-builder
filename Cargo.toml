@@ -10,6 +10,7 @@ name = "vanllia_build"
 # This is an excluded host workspace, including when its checkout is nested in
 # another checkout (Delta worktrees). Do not inherit the enclosing target workspace.
 [workspace]
+members = ["cli"]
 
 # Vanllia host library and CLI. It knows explicit declarations,
 # an explicit Deployment and explicit ImageBuild coordinates; it does not know the

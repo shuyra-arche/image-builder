@@ -1,5 +1,11 @@
 # Vanllia build
 
+The new independent [`vanllia` CLI](cli/README.md) is being implemented in `cli/`.
+Its first slice discovers TOML declarations and Cargo bins and provides pure,
+in-memory Unit selection through `check` and `plan`. It does not yet build a
+bootable product. The legacy surfaces documented below remain until the dynamic
+Unit packaging and System reader have replaced their consumers.
+
 Host package `vanllia-build`, library `vanllia_build`, CLI `vanllia-build`.
 It turns explicit unit declarations plus explicit Cargo image
 coordinates into one initrd: a manifest of loadable ELF images followed by the
