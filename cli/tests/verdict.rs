@@ -35,6 +35,33 @@ fn native_exit_and_reclaim_pass_without_any_kernel_log() {
 }
 
 #[test]
+fn uart_crlf_preserves_typed_receipts_without_accepting_extra_control_bytes() {
+    let bytes = serial(clean());
+    let crlf: Vec<_> = bytes
+        .iter()
+        .flat_map(|byte| {
+            if *byte == b'\n' {
+                vec![b'\r', b'\n']
+            } else {
+                vec![*byte]
+            }
+        })
+        .collect();
+    testing::verify(&crlf, "test", Expectation::Clean).unwrap();
+    let malformed: Vec<_> = crlf
+        .iter()
+        .flat_map(|byte| {
+            if *byte == b'\r' {
+                vec![b'\r', b'\r']
+            } else {
+                vec![*byte]
+            }
+        })
+        .collect();
+    assert!(testing::verify(&malformed, "test", Expectation::Clean).is_err());
+}
+
+#[test]
 fn missing_completion_and_every_truncated_frame_fail() {
     let bytes = serial(clean());
     let final_frame = event::encode(&Event::Complete {

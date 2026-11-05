@@ -22,8 +22,17 @@ pub fn events(serial: &[u8]) -> Result<Vec<Event<String>>, Error> {
             .position(|byte| *byte == b'\n')
             .map(|offset| start + offset + 1)
             .ok_or_else(|| Error::Workflow("truncated System event frame".into()))?;
-        result
-            .push(event::decode(&serial[start..end]).map_err(|e| Error::Workflow(e.to_string()))?);
+        let frame = &serial[start..end];
+        // UART firmware may expand LF to CRLF. Normalize that transport suffix
+        // only; the typed codec still rejects malformed payloads and extra CRs.
+        let canonical;
+        let frame = if let Some(body) = frame.strip_suffix(b"\r\n") {
+            canonical = [body, b"\n"].concat();
+            canonical.as_slice()
+        } else {
+            frame
+        };
+        result.push(event::decode(frame).map_err(|e| Error::Workflow(e.to_string()))?);
         cursor = end;
     }
     Ok(result)
@@ -122,6 +131,21 @@ pub fn execute(root: &std::path::Path, case: &Case, offline: bool) -> Result<(),
         Expectation::Clean => result.status == 0,
         Expectation::Exit(_) | Expectation::Fault => result.status == 0 || result.status == 101,
     };
+    let report = serde_json::json!({
+        "schema": 1,
+        "case": case,
+        "passed": native_status && verdict.is_ok(),
+        "vm_exit": result.status,
+        "initrd_sha256": receipt.initrd.sha256,
+        "kernel_sha256": receipt.kernel.as_ref().map(|kernel| &kernel.sha256),
+        "firmware_sha256": receipt.firmware.as_ref().map(|firmware| &firmware.sha256),
+        "error": verdict.as_ref().err().map(ToString::to_string),
+    });
+    vanllia_build::publish(
+        &result.directory.join("verdict.json"),
+        &serde_json::to_vec_pretty(&report).map_err(|e| Error::Workflow(e.to_string()))?,
+    )
+    .map_err(Error::Workflow)?;
     if !native_status || verdict.is_err() {
         return Err(Error::Workflow(format!(
             "{}: VM exit={}, verdict={verdict:?}; evidence: {}",

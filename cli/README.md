@@ -139,11 +139,15 @@ instance reclaimed and successful System completion. Supported expectations are
 it does not identify an ISA exception code. Diagnostic prose cannot produce a
 pass. Missing, truncated or invalid protocol evidence fails. Kernel event logging
 is not required.
+The serial adapter accepts UART CRLF endings while preserving strict payload
+decoding. A run's `verdict.json` binds the case and native result to exact artifact
+hashes alongside the original serial evidence.
 
 Host tests include real RV64 fixture builds, tampered artifact rejection, source
 locks, local overlays, editor resolution and receipt state transitions. The new
-Pipe case remains build validation until guest acceptance runs. Old scenarios
-and their tests are not migrated in this change.
+Pipe case passed single-core QEMU using native exit/reclamation evidence. Full
+product runtime and SMP acceptance remain untested. Old scenarios and their
+tests are not migrated in this change.
 
 ```sh
 cargo test -p vanllia --target x86_64-unknown-linux-gnu --locked

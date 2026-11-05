@@ -3,9 +3,9 @@
 Validation uses nightly-2026-10-09, public exact Git revisions and real Cargo
 locks; temporary development path patches are not the release evidence.
 
-- CLI host tests: 37 passed, including two real RV64 build fixtures, nine discovery
+- CLI host tests: 38 passed, including two real RV64 build fixtures, nine discovery
   cases, ten selection cases, seven source preparation cases, two native Cargo
-  overlay cases, five typed lifecycle verdict cases and two workspace cases.
+  overlay cases, six typed lifecycle verdict cases and two workspace cases.
 - Host library: 22 inline tests passed, including native nonzero observation,
   timeout, descendant cleanup and evidence failure paths.
 - A deterministic fork test reproduced inherited descriptors retaining a dropped
@@ -18,6 +18,10 @@ locks; temporary development path patches are not the release evidence.
 - Real fixture builds distinguish System-generated runtime resources from packed
   files and reject undeclared missing resources while preserving prior artifacts.
 
-No QEMU or guest acceptance was run. The runner, new guest test, native receipt
-delivery and full product runtime have not yet been accepted in a guest.
+Single-core QEMU 10.0.13 with OpenSBI 1.6 passed the minimal Pipe case, using
+exact artifact hashes and System native exit/reclamation receipts. UART CRLF
+translation was exposed by the first run; the serial adapter now normalizes only
+that line-ending suffix and a regression rejects extra control bytes. Each run
+records `verdict.json` tying the case/result to initrd, kernel and firmware hashes.
+Full product runtime and SMP acceptance have not been run.
 No performance improvement has been measured from removing kernel event logging.
