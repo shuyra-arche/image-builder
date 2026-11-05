@@ -5,6 +5,17 @@ use std::time::{Duration, Instant};
 
 use crate::publication;
 
+pub fn initialize() -> Result<(), String> {
+    // Owned orphaned descendants must remain waitable by this process.
+    if unsafe { libc::prctl(libc::PR_SET_CHILD_SUBREAPER, 1) } != 0 {
+        return Err(format!(
+            "cannot establish child reaping: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+    Ok(())
+}
+
 struct Execution {
     child: std::process::Child,
     owns_group: bool,
@@ -67,7 +78,7 @@ fn drain_group(pid: u32) -> Result<bool, String> {
     Ok(false)
 }
 
-pub(crate) fn capture(command: &mut Command) -> Result<Vec<u8>, String> {
+pub fn capture(command: &mut Command) -> Result<Vec<u8>, String> {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let evidence = std::env::temp_dir().join(format!(
         "vanllia-capture-{}-{}",
@@ -87,7 +98,22 @@ pub(crate) fn capture(command: &mut Command) -> Result<Vec<u8>, String> {
     Ok(output)
 }
 
-pub(super) fn run(command: &mut Command, evidence: &Path, timeout: u64) -> Result<(), String> {
+pub fn run(command: &mut Command, evidence: &Path, timeout: u64) -> Result<(), String> {
+    let status = observe(command, evidence, timeout)?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("execution failed: {status}"))
+    }
+}
+
+/// Observe a native exit without converting an expected nonzero test exit into
+/// a transport failure. Cancellation, timeout and cleanup still return errors.
+pub fn observe(
+    command: &mut Command,
+    evidence: &Path,
+    timeout: u64,
+) -> Result<std::process::ExitStatus, String> {
     super::active()?;
     if timeout == 0 {
         return Err("timeout must be nonzero".into());
@@ -111,6 +137,7 @@ pub(super) fn run(command: &mut Command, evidence: &Path, timeout: u64) -> Resul
         waited: false,
     };
     let started = Instant::now();
+    let mut exit_status = None;
     let result = (|| {
         publication::write(
             &evidence.join("execution.json"),
@@ -122,11 +149,8 @@ pub(super) fn run(command: &mut Command, evidence: &Path, timeout: u64) -> Resul
         loop {
             if let Some(status) = execution.child.try_wait().map_err(|e| e.to_string())? {
                 execution.waited = true;
-                break if status.success() {
-                    Ok(())
-                } else {
-                    Err(format!("execution failed: {status}"))
-                };
+                exit_status = Some(status);
+                break Ok(());
             }
             if started.elapsed() >= Duration::from_secs(timeout) || super::cancelled() {
                 let stop = stop(pid, owns_group);
@@ -180,7 +204,17 @@ pub(super) fn run(command: &mut Command, evidence: &Path, timeout: u64) -> Resul
     } else {
         result
     };
-    record_result(evidence, pid, started.elapsed().as_millis(), result)
+    record_result(evidence, pid, started.elapsed().as_millis(), result)?;
+    let status = exit_status.ok_or("execution exited without a native status")?;
+    use std::os::unix::process::ExitStatusExt;
+    publication::write(
+        &evidence.join("exit.json"),
+        &serde_json::to_vec_pretty(&serde_json::json!({
+            "code": status.code(), "signal": status.signal(), "success": status.success(),
+        }))
+        .map_err(|e| e.to_string())?,
+    )?;
+    Ok(status)
 }
 
 fn record_result(
@@ -198,6 +232,19 @@ fn record_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn observation_preserves_native_failure_without_losing_evidence() {
+        let path = std::env::temp_dir().join(format!("vanllia-native-exit-{}", std::process::id()));
+        let status = observe(Command::new("sh").args(["-c", "exit 17"]), &path, 5).unwrap();
+        assert_eq!(status.code(), Some(17));
+        let exit: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(path.join("exit.json")).unwrap()).unwrap();
+        assert_eq!(exit["code"], 17);
+        assert_eq!(exit["success"], false);
+        assert!(run(Command::new("sh").args(["-c", "exit 17"]), &path, 5).is_err());
+        std::fs::remove_dir_all(path).unwrap();
+    }
 
     #[test]
     fn timeout_stops_owned_execution_and_keeps_evidence() {

@@ -1,11 +1,14 @@
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+mod lease;
+pub use lease::Lease;
+
 static NEXT: AtomicU64 = AtomicU64::new(0);
 
-pub(crate) fn leases(paths: &[&Path]) -> Result<Vec<File>, String> {
+pub(crate) fn leases(paths: &[&Path]) -> Result<Vec<Lease>, String> {
     let mut names = Vec::new();
     for path in paths {
         // Cargo work directories follow directory aliases. Publication replaces
@@ -43,7 +46,7 @@ pub(crate) fn leases(paths: &[&Path]) -> Result<Vec<File>, String> {
             file.try_lock()
                 .map_err(|e| format!("busy {}: {e}", path.display()))?;
             // Keep the inode: unlinking a lock file would allow two simultaneous owners.
-            Ok(file)
+            Ok(Lease { file })
         })
         .collect()
 }

@@ -6,8 +6,8 @@
 
 mod build_group;
 mod capsule;
-mod publication;
 mod provider;
+mod publication;
 pub mod workflow;
 
 use std::io::Read;
@@ -17,8 +17,27 @@ use std::process::Command;
 use build_group::{build_group, groups};
 use unit::{Deployment, UnitFile};
 
-pub use unit::ImageBuild;
 pub use provider::{Provider, collect};
+pub use publication::Lease;
+pub use unit::ImageBuild;
+
+/// Encode the immutable boot image consumed by the kernel's initrd preamble.
+pub fn boot_capsule(elf: &[u8]) -> Result<Vec<u8>, String> {
+    capsule::encode(elf).map_err(|why| format!("invalid System executable: {why:?}"))
+}
+
+/// Keep debug executables on the host while packaging only the runtime ELF.
+pub fn runtime_image(executable: &Path, work: &Path) -> Result<Vec<u8>, String> {
+    slim(executable, work)
+}
+
+pub fn lease(path: &Path) -> Result<Vec<Lease>, String> {
+    publication::leases(&[path])
+}
+
+pub fn publish(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    publication::write(path, bytes)
+}
 
 /// Expand declared UnitFiles and their image resources into the requested
 /// image inventory. Only `ImageBuild.image` is used to identify an image.
@@ -122,11 +141,7 @@ pub fn image_inventory(
     Ok(picked)
 }
 
-fn add_supply_images(
-    names: &mut Vec<&'static str>,
-    program: &UnitFile,
-    builds: &[ImageBuild],
-) {
+fn add_supply_images(names: &mut Vec<&'static str>, program: &UnitFile, builds: &[ImageBuild]) {
     let initrd = system_api::supply::Key::of("system/initrd");
     for binding in program.supply() {
         if binding.source.mark() == initrd.mark()
@@ -310,8 +325,13 @@ pub fn build_with(
 
 fn validate_builds(builds: &[ImageBuild]) -> Result<(), String> {
     for (index, build) in builds.iter().enumerate() {
-        if build.image.is_empty() || build.package.is_empty() || build.bin.is_empty()
-            || build.manifest.is_empty() || build.profile.is_empty() || build.target.is_empty() {
+        if build.image.is_empty()
+            || build.package.is_empty()
+            || build.bin.is_empty()
+            || build.manifest.is_empty()
+            || build.profile.is_empty()
+            || build.target.is_empty()
+        {
             return Err("构建映射缺少 image/package/bin/manifest/profile/target".to_string());
         }
         if builds[..index]
@@ -346,16 +366,18 @@ fn needed_builds<'a>(
 }
 
 pub(crate) fn package_id(cargo: &str, manifest: &Path, package: &str) -> Result<String, String> {
-    let output = crate::workflow::process::capture(Command::new(cargo)
-        .args([
-            "metadata",
-            "--locked",
-            "--format-version",
-            "1",
-            "--no-deps",
-            "--manifest-path",
-        ])
-        .arg(manifest))?;
+    let output = crate::workflow::process::capture(
+        Command::new(cargo)
+            .args([
+                "metadata",
+                "--locked",
+                "--format-version",
+                "1",
+                "--no-deps",
+                "--manifest-path",
+            ])
+            .arg(manifest),
+    )?;
     let value: serde_json::Value =
         serde_json::from_slice(&output).map_err(|e| format!("cargo metadata JSON：{e}"))?;
     value["packages"]
@@ -377,8 +399,8 @@ pub(crate) fn contains(value: &serde_json::Value, want: &str) -> bool {
 }
 
 pub(crate) fn checked_elf(path: &Path) -> Result<PathBuf, String> {
-    let metadata = std::fs::metadata(path)
-        .map_err(|e| format!("执行产物 {} 不可读：{e}", path.display()))?;
+    let metadata =
+        std::fs::metadata(path).map_err(|e| format!("执行产物 {} 不可读：{e}", path.display()))?;
     if !metadata.is_file() {
         return Err(format!("执行产物 {} 不是文件", path.display()));
     }
@@ -407,28 +429,37 @@ fn slim(src: &Path, out: &Path) -> Result<Vec<u8>, String> {
     let dst = out.join(format!(".slim-{}-{name}", std::process::id()));
     // 失败路径也要收拾：临时文件不留痕（成功路径同样走这里）。
     let r = (|| {
-        crate::workflow::process::capture(Command::new("llvm-objcopy")
-            .arg("--strip-all")
-            .arg(src)
-            .arg(&dst))
-            .map_err(|e| {
-                format!(
-                    "起不动 llvm-objcopy（{e}）——造镜像要它剥符号与调试节：装 llvm 包，或 \
+        crate::workflow::process::capture(
+            Command::new("llvm-objcopy")
+                .arg("--strip-all")
+                .arg(src)
+                .arg(&dst),
+        )
+        .map_err(|e| {
+            format!(
+                "起不动 llvm-objcopy（{e}）——造镜像要它剥符号与调试节：装 llvm 包，或 \
                      `rustup component add llvm-tools` 之后把它放进 PATH"
-                )
-            })?;
+            )
+        })?;
         std::fs::read(&dst).map_err(|e| format!("读瘦好的 {} 失败：{e}", dst.display()))
     })();
     if let Err(error) = std::fs::remove_file(&dst)
-        && error.kind() != std::io::ErrorKind::NotFound {
-        return Err(format!("slimming_result={:?}; cleanup {}: {error}", r.as_ref().map(Vec::len), dst.display()));
+        && error.kind() != std::io::ErrorKind::NotFound
+    {
+        return Err(format!(
+            "slimming_result={:?}; cleanup {}: {error}",
+            r.as_ref().map(Vec::len),
+            dst.display()
+        ));
     }
     r
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ImageBuild, checked_elf, image_inventory, needed_builds, startup_order, validate_builds};
+    use super::{
+        ImageBuild, checked_elf, image_inventory, needed_builds, startup_order, validate_builds,
+    };
 
     const fn fixture_build(image: &'static str, bin: &'static str) -> ImageBuild {
         ImageBuild {
@@ -539,7 +570,11 @@ mod tests {
             bootstrap: &[],
             sources: &[],
         };
-        assert!(startup_order(&[&A, &B], &CYCLE).unwrap_err().contains("有环"));
+        assert!(
+            startup_order(&[&A, &B], &CYCLE)
+                .unwrap_err()
+                .contains("有环")
+        );
     }
 
     #[test]
@@ -816,7 +851,11 @@ mod tests {
             bootstrap: &[],
             sources: &[],
         };
-        assert!(startup_order(&[&A, &B], &CYCLE).unwrap_err().contains("有环"));
+        assert!(
+            startup_order(&[&A, &B], &CYCLE)
+                .unwrap_err()
+                .contains("有环")
+        );
 
         static DUP_START: unit::Deployment = unit::Deployment {
             name: "duplicate-start",
@@ -863,11 +902,12 @@ mod tests {
 
     #[test]
     fn image_mapping_rejects_duplicate_and_missing_entries() {
-        let duplicate = [
-            fixture_build("same", "one"),
-            fixture_build("same", "two"),
-        ];
-        assert!(validate_builds(&duplicate).unwrap_err().contains("重复镜像"));
+        let duplicate = [fixture_build("same", "one"), fixture_build("same", "two")];
+        assert!(
+            validate_builds(&duplicate)
+                .unwrap_err()
+                .contains("重复镜像")
+        );
         let bins = [("missing", env::ProgramKind::User)];
         assert!(
             needed_builds(&bins, &[fixture_build("present", "bin")])
