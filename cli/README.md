@@ -145,9 +145,10 @@ hashes alongside the original serial evidence.
 
 Host tests include real RV64 fixture builds, tampered artifact rejection, source
 locks, local overlays, editor resolution and receipt state transitions. The new
-Pipe case passed single-core QEMU using native exit/reclamation evidence. Full
-product runtime and SMP acceptance remain untested. Old scenarios and their
-tests are not migrated in this change.
+Pipe case and unchanged full product passed 1/2/4-core QEMU using native
+exit/reclamation evidence in the Vanllia intake. Its recorded hashes and current
+validation are maintained in that repository's `docs/dynamic-build-validation.md`.
+Old scenarios and their tests are not migrated in this change.
 
 ```sh
 cargo test -p vanllia --target x86_64-unknown-linux-gnu --locked
