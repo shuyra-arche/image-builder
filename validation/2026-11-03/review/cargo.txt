@@ -1,1 +1,0 @@
-cargo 1.100.0-nightly (b2e9d5f9d 2026-09-02)

@@ -1,9 +1,0 @@
-qtest: running `"/workspace/.sqware-tools/rustup/toolchains/nightly-2026-09-04-x86_64-unknown-linux-gnu/bin/cargo" "--config" "/tmp/cargo-qtest-config-82681.toml" "test" "--no-run" "--message-format=json-render-diagnostics" "--target" "riscv64gc-unknown-none-elf" "--release" "--features" "semihosting" "--test" "embedded"`
-qtest: embedded: 1 test(s) in `/workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/sources/kernel/target/riscv64gc-unknown-none-elf/release/build/kernel/5f12f93ed6290021/out/embedded-5f12f93ed6290021`
-
-running 1 test
-qtest: `"/workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/library/examples/pipe/qemu.sh" "-M" "virt" "-bios" "none" "-m" "128M" "-semihosting-config" "enable=on,target=native,arg=run_addr,arg=2149580872" "-nographic" "-kernel" "/workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/sources/kernel/target/riscv64gc-unknown-none-elf/release/build/kernel/5f12f93ed6290021/out/embedded-5f12f93ed6290021" "-machine" "virt" "-bios" "/workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/attempts/1793719891029073702-79643/firmware.bin" "-m" "256" "-smp" "4" "-display" "none" "-serial" "stdio" "-monitor" "none" "-no-reboot" "-initrd" "/workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/attempts/1793719891029073702-79643/initrd.img"`
-test embedded::tests::scene ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.27s
-

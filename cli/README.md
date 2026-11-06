@@ -14,8 +14,8 @@ vanllia build --root /path/to/product
 ```
 
 Use a nightly Cargo with `resolver.lockfile-path`, the RV64 target and LLVM
-tools (`llvm-objcopy` on PATH). Validation used nightly-2026-10-09; the historical
-toolchain pin is unchanged. Cargo provides compilation, dependency resolution
+tools (`llvm-objcopy` on PATH). `rust-toolchain.toml` pins nightly-2026-09-04; a clean
+run under that pin is still needed before claiming it as a verified environment. Cargo provides compilation, dependency resolution
 and caching. The former `vanllia-build` executable has been retired.
 
 ## Product configuration
@@ -34,7 +34,7 @@ target = "riscv64gc-unknown-none-elf"
 profile = "release"
 [sources.runtime]
 git = "https://github.com/shuyra-arche/system.git"
-branch = "codex/dynamic-unit-runtime"
+rev = "REPLACE_WITH_A_VERIFIED_FULL_COMMIT_SHA"
 [sources.pipe]
 path = "components/pipe"
 [runner]
@@ -144,11 +144,9 @@ decoding. A run's `verdict.json` binds the case and native result to exact artif
 hashes alongside the original serial evidence.
 
 Host tests include real RV64 fixture builds, tampered artifact rejection, source
-locks, local overlays, editor resolution and receipt state transitions. The new
-Pipe case and unchanged full product passed 1/2/4-core QEMU using native
-exit/reclamation evidence in the Vanllia intake. Its recorded hashes and current
-validation are maintained in that repository's `docs/dynamic-build-validation.md`.
-Old scenarios and their tests are not migrated in this change.
+locks, local overlays, editor resolution and receipt state transitions. Product
+runtime checks belong to the consuming repository and must be run against its
+selected source pins. Retained old scenario code is not a current test catalog.
 
 ```sh
 cargo test -p vanllia --target x86_64-unknown-linux-gnu --locked

@@ -1,4 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.03s
-     Running `target/x86_64-unknown-linux-gnu/debug/vanllia-build --config examples/pipe/vanllia.json --state /workspace/vanllia-review-state run pipe-independent`
-image resolved: image=kernel package=path+file:///workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/sources/kernel#0.1.0 bin=shuyra target=riscv64gc-unknown-none-elf profile=release features=Array [String("default"), String("semihosting")] executable=/workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/kernel-work/group-0/riscv64gc-unknown-none-elf/release/shuyra
-ok  /workspace/vanllia-review-state/contexts/8f99b81b5a967495ebad6259a93b0fe78702d6c1becd8ef8f55874cd7327c524-1793719887193464799/attempts/1793719891029073702-79643
