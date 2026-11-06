@@ -1,3 +1,0 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
-     Running `target/x86_64-unknown-linux-gnu/debug/vanllia-build --config examples/source/vanllia.json --state /workspace/vanllia-product-state test source-composition`
-ok  /workspace/vanllia-product-state/contexts/da517e8b4b876aba583e7e8455edc84fa804b79f8aaaacee3500732934478f93-1793717095148639657/attempts/1793717106935033354-61477
