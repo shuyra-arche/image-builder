@@ -38,6 +38,9 @@ source pins. Host tests do not establish guest, hardware or SMP acceptance.
 
 ## Library guarantees and limits
 
+[Workflow caller contract](docs/workflow-contract.md) covers source snapshots,
+state isolation, runner ownership, failure reservations and publication receipts.
+
 Published output uses a sibling temporary file and rename while an output lease
 is held; failures preserve the previous successful artifact. This is local
 filesystem atomicity, not a distributed or power-loss durability promise.
